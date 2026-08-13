@@ -1,0 +1,36 @@
+# NOTE: git only treats '#' as a comment at the START of a line.
+# An inline comment after a pattern becomes part of the pattern and silently
+# matches nothing. Every comment in this file must be on its own line.
+
+# --- Disposable: heavy, regenerable, must never reach GitHub ---
+.venv/
+.cache/
+data/
+
+# Belt and braces: these extensions are always build artifacts here.
+*.usearch
+*.npy
+*.parquet
+*.pkl
+
+# --- Secrets ---
+.env
+.env.*
+!.env.example
+*.key
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# --- Benchmarks: keep the reports, drop the raw traces ---
+benchmarks/traces/
+
+# --- OS / editor ---
+Thumbs.db
+.DS_Store
+.vscode/
+.idea/
