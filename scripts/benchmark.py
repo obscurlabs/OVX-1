@@ -152,7 +152,9 @@ def main() -> int:
 
     started = time.perf_counter()
     for i, q in enumerate(queries, 1):
-        response = pipeline.answer(QueryRequest(text=q["text"]))
+        # fast_only defaults to True on QueryRequest, so --llm must switch it off
+        # explicitly - otherwise the flag builds a Groq client that never gets used.
+        response = pipeline.answer(QueryRequest(text=q["text"], fast_only=not args.llm))
         trace = response.trace
 
         core_ms.append(trace.core_ms)
@@ -236,7 +238,9 @@ def main() -> int:
 
     out_dir = Paths.root / "benchmarks" / "reports"
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_path = out_dir / "latency.json"
+    # Separate files: the two modes measure different systems, and overwriting
+    # one with the other loses the headline numbers.
+    out_path = out_dir / ("latency_llm.json" if args.llm else "latency.json")
     out_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
     print(f"\nwrote {out_path}")
 
