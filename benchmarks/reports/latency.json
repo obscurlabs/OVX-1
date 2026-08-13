@@ -1,0 +1,84 @@
+{
+  "generated_at": "2026-08-13 16:50:16",
+  "queries": 400,
+  "llm_escalation": false,
+  "index": {
+    "chunks": 1165508,
+    "quantization": "i8",
+    "encoder": "multilingual-e5-small ONNX int8 (CPU)"
+  },
+  "core_latency_ms": {
+    "p50": 9.11,
+    "p70": 9.7,
+    "p90": 11.01,
+    "p100": 16.8,
+    "mean": 9.4
+  },
+  "per_stage_ms": {
+    "encode": {
+      "p50": 3.81,
+      "p70": 4.18,
+      "p90": 4.87,
+      "p100": 7.79,
+      "mean": 3.97
+    },
+    "guard_in": {
+      "p50": 0.03,
+      "p70": 0.1,
+      "p90": 0.14,
+      "p100": 0.54,
+      "mean": 0.07
+    },
+    "guard_out": {
+      "p50": 0.11,
+      "p70": 0.13,
+      "p90": 0.18,
+      "p100": 0.79,
+      "mean": 0.12
+    },
+    "retrieve": {
+      "p50": 4.75,
+      "p70": 5.16,
+      "p90": 6.0,
+      "p100": 10.42,
+      "mean": 4.96
+    },
+    "route": {
+      "p50": 0.21,
+      "p70": 0.25,
+      "p90": 0.38,
+      "p100": 1.03,
+      "mean": 0.24
+    }
+  },
+  "by_language_ms": {
+    "hi": {
+      "p50": 9.44,
+      "p70": 10.05,
+      "p90": 11.16,
+      "p100": 13.73,
+      "mean": 9.62
+    },
+    "en": {
+      "p50": 8.85,
+      "p70": 9.33,
+      "p90": 10.58,
+      "p100": 16.8,
+      "mean": 9.19
+    }
+  },
+  "decisions": {
+    "answer": 379,
+    "abstain": 21
+  },
+  "routes": {
+    "extractive": 379
+  },
+  "retrieval_recall": {
+    "queries_with_gold": 400,
+    "hits": 226,
+    "recall_at_k": 0.565,
+    "k": 5
+  },
+  "throughput_qps": 105.3
+}

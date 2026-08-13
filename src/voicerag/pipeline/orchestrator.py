@@ -88,7 +88,12 @@ class VoiceRagPipeline:
 
             stt = SarvamSTT(settings=settings)
 
-        return cls(retriever, router, stt=stt, settings=settings)
+        # The relevance guard needs corpus term statistics to tell an
+        # unanswerable question from an answerable one, so it is given the same
+        # BM25 index retrieval uses.
+        relevance_guard = RelevanceGuard(lexical_index=retriever.bm25)
+
+        return cls(retriever, router, relevance_guard=relevance_guard, stt=stt, settings=settings)
 
     # -- request path -------------------------------------------------------
 

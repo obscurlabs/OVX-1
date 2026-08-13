@@ -194,6 +194,32 @@ class BM25Index:
             payload["n_docs"],
         )
 
+    # -- term statistics ----------------------------------------------------
+
+    @property
+    def max_idf(self) -> float:
+        """IDF of a term appearing in no document.
+
+        An out-of-vocabulary term is maximally informative: nothing in the
+        corpus contains it, so a query hinging on it cannot be answered here.
+        """
+        return float(np.log(1.0 + (self.n_docs + 0.5) / 0.5))
+
+    def idf(self, term: str) -> float:
+        """Inverse document frequency, derived from the postings layout.
+
+        df is recoverable from the offsets array, so no extra storage and no
+        index rebuild are needed to expose this.
+        """
+        term_id = self.vocab.get(term)
+        if term_id is None:
+            return self.max_idf
+        df = int(self.offsets[term_id + 1] - self.offsets[term_id])
+        return float(np.log(1.0 + (self.n_docs - df + 0.5) / (df + 0.5)))
+
+    def knows(self, term: str) -> bool:
+        return term in self.vocab
+
     @property
     def memory_mb(self) -> float:
         arrays = self.offsets.nbytes + self.doc_ids.nbytes + self.weights.nbytes

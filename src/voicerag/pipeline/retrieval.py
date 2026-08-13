@@ -87,7 +87,13 @@ class HybridRetriever:
         # Kept as an Arrow table rather than Python lists: 1.17M rows of text
         # cost ~1GB as Python str objects but a fraction of that in Arrow, and
         # we only ever materialize the ~50 candidate rows per request.
-        chunk_meta = pq.read_table(index_dir / "chunks_meta.parquet")
+        #
+        # combine_chunks() is not cosmetic. pq.read_table returns a table backed
+        # by many record batches, and Table.take must then resolve which batch
+        # each row index falls into - measured at ~60ms per request, nine tenths
+        # of total latency. Combining into one contiguous chunk once at startup
+        # makes take O(k) in the number of rows requested.
+        chunk_meta = pq.read_table(index_dir / "chunks_meta.parquet").combine_chunks()
         encoder = OnnxQueryEncoder(encoder_dir)
 
         return cls(dense, bm25, lexical_rows, chunk_meta, encoder)

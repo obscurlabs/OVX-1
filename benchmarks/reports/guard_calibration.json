@@ -1,0 +1,118 @@
+{
+  "sweep": [
+    {
+      "idf_coverage": 0.0,
+      "distinctive_top_n": 0,
+      "false_refusal": 0.0,
+      "false_answer": 1.0
+    },
+    {
+      "idf_coverage": 0.0,
+      "distinctive_top_n": 1,
+      "false_refusal": 0.1367,
+      "false_answer": 0.0385
+    },
+    {
+      "idf_coverage": 0.0,
+      "distinctive_top_n": 2,
+      "false_refusal": 0.0233,
+      "false_answer": 0.7692
+    },
+    {
+      "idf_coverage": 0.45,
+      "distinctive_top_n": 0,
+      "false_refusal": 0.0133,
+      "false_answer": 0.9231
+    },
+    {
+      "idf_coverage": 0.45,
+      "distinctive_top_n": 1,
+      "false_refusal": 0.1367,
+      "false_answer": 0.0385
+    },
+    {
+      "idf_coverage": 0.45,
+      "distinctive_top_n": 2,
+      "false_refusal": 0.0367,
+      "false_answer": 0.6923
+    },
+    {
+      "idf_coverage": 0.55,
+      "distinctive_top_n": 0,
+      "false_refusal": 0.02,
+      "false_answer": 0.5385
+    },
+    {
+      "idf_coverage": 0.55,
+      "distinctive_top_n": 1,
+      "false_refusal": 0.1367,
+      "false_answer": 0.0385
+    },
+    {
+      "idf_coverage": 0.55,
+      "distinctive_top_n": 2,
+      "false_refusal": 0.0433,
+      "false_answer": 0.3462
+    },
+    {
+      "idf_coverage": 0.65,
+      "distinctive_top_n": 0,
+      "false_refusal": 0.03,
+      "false_answer": 0.1538
+    },
+    {
+      "idf_coverage": 0.65,
+      "distinctive_top_n": 1,
+      "false_refusal": 0.1367,
+      "false_answer": 0.0385
+    },
+    {
+      "idf_coverage": 0.65,
+      "distinctive_top_n": 2,
+      "false_refusal": 0.0467,
+      "false_answer": 0.0769
+    },
+    {
+      "idf_coverage": 0.75,
+      "distinctive_top_n": 0,
+      "false_refusal": 0.0433,
+      "false_answer": 0.0385
+    },
+    {
+      "idf_coverage": 0.75,
+      "distinctive_top_n": 1,
+      "false_refusal": 0.1367,
+      "false_answer": 0.0385
+    },
+    {
+      "idf_coverage": 0.75,
+      "distinctive_top_n": 2,
+      "false_refusal": 0.06,
+      "false_answer": 0.0385
+    },
+    {
+      "idf_coverage": 0.85,
+      "distinctive_top_n": 0,
+      "false_refusal": 0.05,
+      "false_answer": 0.0385
+    },
+    {
+      "idf_coverage": 0.85,
+      "distinctive_top_n": 1,
+      "false_refusal": 0.1367,
+      "false_answer": 0.0385
+    },
+    {
+      "idf_coverage": 0.85,
+      "distinctive_top_n": 2,
+      "false_refusal": 0.0667,
+      "false_answer": 0.0385
+    }
+  ],
+  "recommended": {
+    "idf_coverage": 0.75,
+    "distinctive_top_n": 0,
+    "false_refusal": 0.0433,
+    "false_answer": 0.0385
+  }
+}
