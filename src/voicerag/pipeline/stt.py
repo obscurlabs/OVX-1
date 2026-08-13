@@ -210,7 +210,13 @@ class SarvamSTT:
                     self.settings.sarvam_stt_url,
                     headers={"api-subscription-key": self.settings.sarvam_api_key},
                     files={"file": ("audio.wav", wav, "audio/wav")},
-                    data={"model": self.settings.sarvam_model, "language_code": language_code},
+                    data={
+                        "model": self.settings.sarvam_model,
+                        "language_code": language_code,
+                        # Keeps saaras transcribing in the spoken language rather
+                        # than translating it to English.
+                        "mode": self.settings.sarvam_mode,
+                    },
                 )
             except httpx.HTTPError as exc:
                 last_error = exc

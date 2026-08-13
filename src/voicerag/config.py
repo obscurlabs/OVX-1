@@ -58,7 +58,16 @@ class Settings(BaseSettings):
     # request or the pipeline fails loudly rather than silently spending credits.
     sarvam_allow_live: bool = False
     sarvam_stt_url: str = "https://api.sarvam.ai/speech-to-text"
-    sarvam_model: str = "saarika:v2"
+    # saarika:v2 was the original choice but that family is being deprecated
+    # (v2.5 is already flagged), and a model retirement on demo day with no
+    # resubmission allowed is an unacceptable risk. saaras:v3 is Sarvam's
+    # current recommended model for transcription.
+    sarvam_model: str = "saaras:v3"
+    # CRITICAL: saaras defaults toward translation. mode="transcribe" keeps the
+    # output in the SPOKEN language. Translating a Hindi question to English
+    # would silently break monolingual Hindi retrieval, since the query would
+    # then be matched against the corpus in the wrong language.
+    sarvam_mode: str = "transcribe"
 
     # --- Answer generation (Groq) ------------------------------------------
     # Multiple free-tier keys pooled into one effective rate limit; the harness
