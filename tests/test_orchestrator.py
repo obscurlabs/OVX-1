@@ -141,7 +141,7 @@ class TestGuardShortCircuits:
         """The last line of defence: the answer exists but is unsupported."""
 
         class HallucinatingRouter(AnswerRouter):
-            def route(self, query, chunks):
+            def route(self, query, chunks, allow_escalation: bool = True):
                 from voicerag.contracts import Answer
 
                 return (

@@ -141,7 +141,12 @@ class AnswerRouter:
         self.max_context_chunks = max_context_chunks
         self.max_context_chars = max_context_chars
 
-    def route(self, query: str, chunks: list[RetrievedChunk]) -> tuple[Answer, Route]:
+    def route(
+        self,
+        query: str,
+        chunks: list[RetrievedChunk],
+        allow_escalation: bool = True,
+    ) -> tuple[Answer, Route]:
         # With no context there is nothing to be grounded in, and escalating
         # would hand the model an empty context - an open invitation to answer
         # from parametric memory, which is the exact failure the guardrails
@@ -174,7 +179,7 @@ class AnswerRouter:
         # Escalate. If the LLM is unavailable - no keys, all keys cooling down,
         # upstream failure - fall back to the best extractive candidate rather
         # than failing the request, and let the grounding guard judge it.
-        if self.llm is not None and getattr(self.llm, "enabled", False):
+        if allow_escalation and self.llm is not None and getattr(self.llm, "enabled", False):
             try:
                 return self._escalate(query, chunks)
             except Exception:  # noqa: BLE001 - degradation is the intended behaviour

@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>OVX-1 · Voice RAG</title>
+<style>
+  :root {
+    --bg: #0b0f14;
+    --panel: #121822;
+    --panel-2: #171f2b;
+    --line: #223040;
+    --ink: #e6edf5;
+    --muted: #8a9bb0;
+    --accent: #4ade80;
+    --accent-dim: #1d5c38;
+    --warn: #fbbf24;
+    --danger: #f87171;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 20px 80px; }
+
+  header { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 4px; }
+  h1 { font-size: 21px; margin: 0; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); font-size: 13px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); display: inline-block; }
+  .dot.ok { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+  .dot.bad { background: var(--danger); }
+
+  .stats { display: flex; gap: 18px; flex-wrap: wrap; color: var(--muted);
+           font: 12px/1 var(--mono); margin: 14px 0 22px; }
+  .stats b { color: var(--ink); font-weight: 600; }
+
+  .ask { display: flex; gap: 10px; margin-bottom: 10px; }
+  input[type=text] {
+    flex: 1; background: var(--panel); border: 1px solid var(--line); color: var(--ink);
+    padding: 13px 15px; border-radius: 9px; font-size: 15px; outline: none;
+  }
+  input[type=text]:focus { border-color: var(--accent-dim); }
+  button {
+    background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
+    padding: 13px 18px; border-radius: 9px; cursor: pointer; font-size: 14px;
+    font-weight: 500; transition: border-color .15s, background .15s;
+  }
+  button:hover:not(:disabled) { border-color: var(--accent-dim); background: #1c2634; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button.mic.recording { border-color: var(--danger); color: var(--danger); animation: pulse 1.1s infinite; }
+  @keyframes pulse { 50% { background: #2a1520; } }
+
+  .toggle { display: flex; align-items: flex-start; gap: 9px; margin: 0 0 16px;
+            color: var(--muted); font-size: 13px; cursor: pointer; }
+  .toggle input { margin-top: 2px; accent-color: var(--accent); }
+  .toggle em { font-style: normal; color: #5f7085; }
+
+  .examples { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 26px; }
+  .chip {
+    background: transparent; border: 1px solid var(--line); color: var(--muted);
+    padding: 6px 11px; border-radius: 20px; font-size: 12.5px; cursor: pointer;
+  }
+  .chip:hover { color: var(--ink); border-color: var(--accent-dim); }
+
+  /* ---- latency: the headline number ---- */
+  .metrics { display: grid; grid-template-columns: auto 1fr; gap: 22px; align-items: center;
+             background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+             padding: 20px 22px; margin-bottom: 18px; }
+  .total { text-align: center; min-width: 128px; }
+  .total .n { font: 700 46px/1 var(--mono); letter-spacing: -0.03em; color: var(--accent); }
+  .total .u { font: 500 12px/1 var(--mono); color: var(--muted); letter-spacing: .12em; margin-top: 7px; }
+  .total .cap { font-size: 11px; color: var(--muted); margin-top: 9px; }
+  .bars { display: flex; flex-direction: column; gap: 7px; }
+  .bar { display: grid; grid-template-columns: 78px 1fr 62px; align-items: center; gap: 11px; }
+  .bar span:first-child { font: 11px/1 var(--mono); color: var(--muted); text-transform: uppercase; }
+  .track { height: 7px; background: #0d131b; border-radius: 4px; overflow: hidden; }
+  .fill { height: 100%; background: linear-gradient(90deg, var(--accent-dim), var(--accent)); border-radius: 4px;
+          transition: width .35s cubic-bezier(.4,0,.2,1); }
+  .bar span:last-child { font: 12px/1 var(--mono); color: var(--ink); text-align: right; }
+
+  /* ---- answer ---- */
+  .answer { background: var(--panel); border: 1px solid var(--line); border-left-width: 3px;
+            border-radius: 12px; padding: 20px 22px; margin-bottom: 18px; }
+  .answer.answer-ok { border-left-color: var(--accent); }
+  .answer.answer-abstain { border-left-color: var(--warn); }
+  .answer.answer-refuse { border-left-color: var(--danger); }
+  .badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 13px; }
+  .badge { font: 11px/1 var(--mono); padding: 5px 9px; border-radius: 5px;
+           background: var(--panel-2); color: var(--muted); border: 1px solid var(--line);
+           text-transform: uppercase; letter-spacing: .05em; }
+  .badge.ok { color: var(--accent); border-color: var(--accent-dim); }
+  .badge.warn { color: var(--warn); border-color: #5c451d; }
+  .badge.bad { color: var(--danger); border-color: #5c2020; }
+  .answer p { margin: 0; font-size: 16.5px; line-height: 1.6; }
+  .transcript { color: var(--muted); font-size: 13.5px; margin-bottom: 11px; }
+  .transcript b { color: var(--ink); font-weight: 500; }
+
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .1em;
+       color: var(--muted); margin: 26px 0 12px; font-weight: 600; }
+  .chunk { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+           padding: 14px 16px; margin-bottom: 9px; }
+  .chunk-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 9px;
+                font: 11px/1 var(--mono); color: var(--muted); }
+  .tag { background: var(--panel-2); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--line); }
+  .tag.hi { color: #c084fc; } .tag.en { color: #60a5fa; }
+  .chunk p { margin: 0; font-size: 13.5px; color: #c3d0e0; line-height: 1.55; }
+
+  .err { background: #1e1216; border: 1px solid #5c2020; color: var(--danger);
+         padding: 14px 16px; border-radius: 10px; margin-bottom: 16px; font-size: 14px; }
+  .hidden { display: none; }
+  footer { margin-top: 44px; color: var(--muted); font-size: 12px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>OVX-1</h1>
+    <span class="sub">Voice RAG · MSMARCO-XI · Hindi + English</span>
+  </header>
+  <div class="stats" id="stats"><span class="dot" id="dot"></span><span>connecting…</span></div>
+
+  <div class="ask">
+    <input type="text" id="q" placeholder="Ask a question, or hold the mic…" autocomplete="off" />
+    <button id="send">Ask</button>
+    <button id="mic" class="mic" title="Record a question">● Rec</button>
+  </div>
+
+  <label class="toggle">
+    <input type="checkbox" id="deep" />
+    <span>Deep mode — allow LLM synthesis when extraction is weak
+      <em>(~7% of queries; adds 220–330 ms, exceeds the 200 ms budget)</em></span>
+  </label>
+
+  <div class="examples" id="examples"></div>
+
+  <div id="error" class="err hidden"></div>
+
+  <div id="results" class="hidden">
+    <div class="metrics">
+      <div class="total">
+        <div class="n" id="totalMs">—</div>
+        <div class="u">MILLISECONDS</div>
+        <div class="cap">budget 200 ms</div>
+      </div>
+      <div class="bars" id="bars"></div>
+    </div>
+
+    <div class="answer" id="answerBox">
+      <div class="badges" id="badges"></div>
+      <div class="transcript hidden" id="transcript"></div>
+      <p id="answerText"></p>
+    </div>
+
+    <h2 id="ctxHead" class="hidden">Retrieved context</h2>
+    <div id="chunks"></div>
+  </div>
+
+  <footer>Obscur Labs · #RAGInGoa</footer>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const EXAMPLES = [
+  "what is a corporation",
+  "how long does it take to boil an egg",
+  "प्रकाश संश्लेषण कैसे होता है",
+  "निगम क्या है",
+  "what is the melting point of unobtainium",
+];
+
+let recorder = null, chunksBuf = [], recording = false;
+
+// ---------- health ----------
+async function loadHealth() {
+  try {
+    const r = await fetch("/api/health");
+    const h = await r.json();
+    if (!h.ready) {
+      $("stats").innerHTML = `<span class="dot bad"></span><span>${h.error || "loading…"}</span>`;
+      return;
+    }
+    $("stats").innerHTML =
+      `<span class="dot ok"></span>` +
+      `<span><b>${h.chunks.toLocaleString()}</b> chunks</span>` +
+      `<span><b>${h.lexical_docs.toLocaleString()}</b> lexical docs</span>` +
+      `<span>voice <b>${h.voice_enabled ? "live" : "cached"}</b></span>`;
+    if (!h.voice_enabled) $("mic").title = "Voice replays cached recordings (credit guard active)";
+  } catch (e) {
+    $("stats").innerHTML = `<span class="dot bad"></span><span>server unreachable</span>`;
+  }
+}
+
+// ---------- rendering ----------
+const STAGES = [
+  ["stt", "speech"], ["guard_in", "guard in"], ["encode", "encode"],
+  ["retrieve", "retrieve"], ["route", "answer"], ["generate", "generate"],
+  ["guard_out", "guard out"],
+];
+
+function render(data) {
+  $("results").classList.remove("hidden");
+  $("error").classList.add("hidden");
+
+  const t = data.trace;
+  const byStage = {};
+  for (const s of t.timings) byStage[s.stage] = (byStage[s.stage] || 0) + s.ms;
+
+  // The headline is the segment the brief specifies: transcript -> answer.
+  const core = t.timings.filter(s => s.stage !== "stt").reduce((a, s) => a + s.ms, 0);
+  $("totalMs").textContent = core.toFixed(1);
+
+  const max = Math.max(...Object.values(byStage), 1);
+  $("bars").innerHTML = STAGES.filter(([k]) => byStage[k] !== undefined).map(([k, label]) => {
+    const ms = byStage[k];
+    return `<div class="bar"><span>${label}</span>
+      <div class="track"><div class="fill" style="width:${Math.max(2, ms / max * 100)}%"></div></div>
+      <span>${ms.toFixed(2)} ms</span></div>`;
+  }).join("");
+
+  const decision = data.answer.decision;
+  const box = $("answerBox");
+  box.className = "answer answer-" + (decision === "answer" ? "ok" : decision);
+
+  const badges = [];
+  const cls = decision === "answer" ? "ok" : decision === "abstain" ? "warn" : "bad";
+  badges.push(`<span class="badge ${cls}">${decision}</span>`);
+  if (data.answer.route) badges.push(`<span class="badge">${data.answer.route} path</span>`);
+  if (data.answer.grounding_score != null)
+    badges.push(`<span class="badge">grounding ${data.answer.grounding_score.toFixed(2)}</span>`);
+  if (t.degradation && t.degradation !== "full")
+    badges.push(`<span class="badge warn">${t.degradation}</span>`);
+  $("badges").innerHTML = badges.join("");
+
+  if (data.transcript) {
+    $("transcript").classList.remove("hidden");
+    $("transcript").innerHTML =
+      `heard: <b>${escapeHtml(data.transcript.text)}</b> ` +
+      `<span class="badge">${data.transcript.language}</span> ` +
+      `<span class="badge">${data.transcript.cached ? "cached" : "live"}</span>`;
+  } else {
+    $("transcript").classList.add("hidden");
+  }
+
+  $("answerText").textContent = data.answer.text;
+
+  const cs = data.chunks || [];
+  $("ctxHead").classList.toggle("hidden", cs.length === 0);
+  $("chunks").innerHTML = cs.map(c => `
+    <div class="chunk">
+      <div class="chunk-meta">
+        <span class="tag ${c.lang}">${c.lang}</span>
+        <span class="tag">${c.strategy}</span>
+        ${c.dense_score != null ? `<span class="tag">dense ${c.dense_score.toFixed(3)}</span>` : ""}
+        ${c.lexical_score != null ? `<span class="tag">bm25 ${c.lexical_score.toFixed(1)}</span>` : ""}
+        ${c.fused_score != null ? `<span class="tag">rrf ${c.fused_score.toFixed(4)}</span>` : ""}
+      </div>
+      <p>${escapeHtml(c.text.slice(0, 320))}${c.text.length > 320 ? "…" : ""}</p>
+    </div>`).join("");
+}
+
+function escapeHtml(s) {
+  const d = document.createElement("div");
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function showError(msg) {
+  $("error").textContent = msg;
+  $("error").classList.remove("hidden");
+}
+
+// ---------- actions ----------
+async function ask(text) {
+  if (!text.trim()) return;
+  $("send").disabled = true;
+  try {
+    const r = await fetch("/api/query", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, fast_only: !$("deep").checked }),
+    });
+    if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+    render(await r.json());
+  } catch (e) {
+    showError("Query failed: " + e.message);
+  } finally {
+    $("send").disabled = false;
+  }
+}
+
+async function toggleMic() {
+  if (recording) {
+    recorder.stop();
+    return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    recorder = new MediaRecorder(stream);
+    chunksBuf = [];
+    recorder.ondataavailable = (e) => chunksBuf.push(e.data);
+    recorder.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop());
+      recording = false;
+      $("mic").classList.remove("recording");
+      $("mic").textContent = "● Rec";
+
+      const blob = new Blob(chunksBuf, { type: "audio/webm" });
+      const form = new FormData();
+      form.append("audio", blob, "q.webm");
+      try {
+        const r = await fetch("/api/voice", { method: "POST", body: form });
+        if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+        render(await r.json());
+      } catch (e) {
+        showError("Voice failed: " + e.message);
+      }
+    };
+    recorder.start();
+    recording = true;
+    $("mic").classList.add("recording");
+    $("mic").textContent = "■ Stop";
+  } catch (e) {
+    showError("Microphone unavailable: " + e.message);
+  }
+}
+
+$("send").onclick = () => ask($("q").value);
+$("q").onkeydown = (e) => { if (e.key === "Enter") ask($("q").value); };
+$("mic").onclick = toggleMic;
+
+$("examples").innerHTML = EXAMPLES.map(e =>
+  `<button class="chip">${escapeHtml(e)}</button>`).join("");
+$("examples").onclick = (e) => {
+  if (!e.target.classList.contains("chip")) return;
+  $("q").value = e.target.textContent;
+  ask(e.target.textContent);
+};
+
+loadHealth();
+</script>
+</body>
+</html>

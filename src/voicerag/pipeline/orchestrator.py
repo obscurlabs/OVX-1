@@ -186,7 +186,9 @@ class VoiceRagPipeline:
 
         # --- answer --------------------------------------------------------
         with Timer() as timer:
-            answer, route = self.router.route(query, retrieval.chunks)
+            answer, route = self.router.route(
+                query, retrieval.chunks, allow_escalation=not request.fast_only
+            )
         trace.add(
             Stage.GENERATE if route.value == "llm" else Stage.ROUTE,
             timer.ms,

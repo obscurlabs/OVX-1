@@ -45,7 +45,11 @@ OUT_OF_CORPUS = [
     "what is quantum flibbertigibbet theory",
     "how do you calibrate a nebulon flux capacitor",
     "what did the treaty of vondelmarch establish",
-    "who is the current president of wakanda",
+    # "who is the current president of wakanda" was removed from this suite: the
+    # corpus genuinely contains 27 documents mentioning Wakanda (Marvel content
+    # in the web crawl), so it is NOT out-of-corpus and the guard was correct to
+    # allow it. Leaving it here mislabelled the results as a guard failure.
+    "who is the current monarch of narnovia",
     "what is the melting point of unobtainium",
     "how many moons does the planet zephyria have",
     "what language do the thraxians speak",

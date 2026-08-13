@@ -15,6 +15,10 @@ dependencies = [
     "orjson>=3.10",
     "httpx>=0.27",
     "numpy>=1.26,<3",
+    # Serving reads chunks_meta.parquet on every request, so pyarrow belongs in
+    # the core set, not the [index] extra. Having it only in [index] produced a
+    # container that built cleanly and then died on first import.
+    "pyarrow>=17",
     "onnxruntime>=1.19",
     "tokenizers>=0.20",
     "rank-bm25>=0.2.2",
@@ -34,7 +38,6 @@ index = [
     "sentence-transformers>=3.2",
     "transformers>=4.45",
     "datasets>=3.0",
-    "pyarrow>=17",
     "optimum[onnxruntime]>=1.23",
     "accelerate>=1.0",
 ]
