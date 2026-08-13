@@ -87,6 +87,12 @@ class RetrievalResult(BaseModel):
     degradation: DegradationLevel = DegradationLevel.FULL
     n_dense: int = 0
     n_lexical: int = 0
+    # Sub-stage timings, so requirement 4's breakdown reports where the time
+    # actually goes instead of one opaque "retrieval" number.
+    encode_ms: float = 0.0
+    dense_ms: float = 0.0
+    lexical_ms: float = 0.0
+    fuse_ms: float = 0.0
 
 
 class GuardVerdict(BaseModel):

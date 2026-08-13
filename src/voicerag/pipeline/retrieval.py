@@ -23,6 +23,7 @@ beats a 500.
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
 
 import numpy as np
@@ -110,16 +111,27 @@ class HybridRetriever:
         lexical_scores: dict[int, float] = {}
         errors: list[str] = []
 
+        encode_ms = dense_ms = lexical_ms = fuse_ms = 0.0
+
         try:
+            started = time.perf_counter()
             vector = self.query_encoder.encode(query)
+            encode_ms = (time.perf_counter() - started) * 1000
+
+            started = time.perf_counter()
             rows, sims = self.dense_index.search(vector, top_k=candidate_k)
+            dense_ms = (time.perf_counter() - started) * 1000
+
             dense_ranked = [int(r) for r in rows]
             dense_scores = {int(r): float(s) for r, s in zip(rows, sims, strict=False)}
         except Exception as exc:  # noqa: BLE001
             errors.append(f"dense: {type(exc).__name__}: {exc}")
 
         try:
+            started = time.perf_counter()
             doc_ids, scores = self.bm25.search(query, top_k=candidate_k)
+            lexical_ms = (time.perf_counter() - started) * 1000
+
             lexical_ranked = [int(self.lexical_rows[d]) for d in doc_ids]
             lexical_scores = {
                 int(self.lexical_rows[d]): float(s)
@@ -136,14 +148,20 @@ class HybridRetriever:
         elif not lexical_ranked:
             degradation = DegradationLevel.DENSE_ONLY
 
+        started = time.perf_counter()
         fused = self._fuse(dense_ranked, lexical_ranked)
         rows = self._materialize(fused, dense_scores, lexical_scores, top_k, lang)
+        fuse_ms = (time.perf_counter() - started) * 1000
 
         return RetrievalResult(
             chunks=rows,
             degradation=degradation,
             n_dense=len(dense_ranked),
             n_lexical=len(lexical_ranked),
+            encode_ms=encode_ms,
+            dense_ms=dense_ms,
+            lexical_ms=lexical_ms,
+            fuse_ms=fuse_ms,
         )
 
     def _fuse(self, dense_ranked: list[int], lexical_ranked: list[int]) -> list[tuple[int, float]]:
