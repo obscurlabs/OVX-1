@@ -29,7 +29,12 @@ USER user
 
 # Keep every cache inside the writable app dir; the default HOME-based paths are
 # not reliably writable on Spaces.
-ENV HF_HOME=/app/.cache/hf \
+# VOICERAG_ROOT is not optional here. The package is installed into
+# site-packages, so config.py cannot infer the project root from __file__ - it
+# would resolve to /usr/local/lib/python3.12 and the app would look for its
+# index and web assets there instead of in /app.
+ENV VOICERAG_ROOT=/app \
+    HF_HOME=/app/.cache/hf \
     HF_HUB_DISABLE_SYMLINKS_WARNING=1 \
     PYTHONUNBUFFERED=1 \
     PORT=7860

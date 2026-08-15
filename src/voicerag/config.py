@@ -6,14 +6,28 @@ model caches, datasets and indexes all live under this folder and vanish with it
 
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from pathlib import Path
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# src/voicerag/config.py -> src/voicerag -> src -> project root
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+# Locally the package is imported from the source tree, so the root is three
+# levels up: src/voicerag/config.py -> src/voicerag -> src -> project root.
+#
+# In the container that derivation is WRONG. `pip install .` puts the package in
+# site-packages, so __file__ becomes
+#   /usr/local/lib/python3.12/site-packages/voicerag/config.py
+# and parents[2] resolves to /usr/local/lib/python3.12 - a root-owned directory
+# that is nowhere near web/ and that uid 1000 cannot write to. The failure is
+# silent at build time and fatal at boot: mkdir on data/indexes raises
+# PermissionError, and WEB_DIR.exists() is False so the UI never mounts.
+#
+# VOICERAG_ROOT lets the deployment state the root explicitly instead of
+# inferring it from an install layout that differs between dev and prod.
+_ENV_ROOT = os.environ.get("VOICERAG_ROOT")
+PROJECT_ROOT = Path(_ENV_ROOT).resolve() if _ENV_ROOT else Path(__file__).resolve().parents[2]
 
 
 class Paths:

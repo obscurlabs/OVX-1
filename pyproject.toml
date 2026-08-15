@@ -21,6 +21,10 @@ dependencies = [
     "pyarrow>=17",
     "onnxruntime>=1.19",
     "tokenizers>=0.20",
+    # api.fetch_artifacts imports this at boot. It currently arrives for free as
+    # a dependency of tokenizers, which is exactly why it has to be declared:
+    # relying on someone else's transitive dep is how pyarrow got missed.
+    "huggingface-hub>=0.26",
     "rank-bm25>=0.2.2",
     # usearch over hnswlib: same HNSW algorithm, but ships Windows wheels (hnswlib
     # is source-only and needs MSVC). Also gives native int8 quantization and
