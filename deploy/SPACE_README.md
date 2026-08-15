@@ -22,12 +22,13 @@ Built by **Obscur Labs** for HH Goa 2026 · `#RAGInGoa`
 
 | Percentile | Core latency |
 |---|---|
-| P50 | 9.11 ms |
-| P70 | 9.70 ms |
-| P100 | 16.80 ms |
+| P50 | 9.43 ms |
+| P70 | 10.59 ms |
+| P100 | 42.52 ms |
 
-Core = transcript → final answer, the segment the brief enumerates. Speech-to-text
-is a network round trip and is reported separately.
+100% of queries land under the 200ms budget. Core = transcript → final answer,
+the segment the brief enumerates. Speech-to-text is a network round trip and is
+reported separately.
 
 ## Knowing when not to answer
 
@@ -35,10 +36,12 @@ is a network round trip and is reported separately.
 |---|---|
 | Unsafe input blocked | 100% |
 | Prompt injection blocked | 100% |
-| Out-of-corpus refused | 91.7% |
+| Out-of-corpus refused | 100% |
 | Legitimate questions answered | 93.3% |
 
-Try `who is the current president of wakanda` — the corpus has no such thing, and
+False answer rate **0%**; false refusal rate **6.7%**.
+
+Try `what is the population of the zorbian empire` — no such thing exists, and
 saying so is the correct answer.
 
 ## Configuration
