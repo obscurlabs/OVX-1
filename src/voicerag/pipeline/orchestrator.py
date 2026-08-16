@@ -74,7 +74,7 @@ class VoiceRagPipeline:
         settings = settings or get_settings()
         retriever = HybridRetriever.load(
             index_dir or Paths.indexes,
-            encoder_dir or Paths.onnx_encoder,
+            encoder_dir or Paths.serving_encoder(),
             dim=settings.embed_dim,
         )
         router = AnswerRouter(

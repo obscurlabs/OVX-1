@@ -1,138 +1,145 @@
-# Deploying OVX-1 to Hugging Face Spaces
+# Deploying OVX-1
 
-The build splits across two hosts because of a hard constraint: GitHub rejects
-files over 100MB, and the serving artifacts total ~830MB.
+Target: **Render free tier** — 512MB RAM, 0.1 CPU, no credit card, HTTPS included.
 
-```
-GitHub          source, tests, benchmarks          ~120 KB
-HF dataset repo dense index, BM25, ONNX encoder    ~830 MB
-HF Space        Docker container, pulls the above on boot
-```
+HTTPS matters more than it looks. `getUserMedia` only works in a secure context,
+so the microphone is dead over plain `http://`. Render issues a certificate for
+`*.onrender.com` automatically, so voice input works with no extra setup.
 
-The Space downloads artifacts at startup instead of baking them into the image.
-That keeps the image ~200MB and means the index can be rebuilt and republished
-without rebuilding the container.
+## What the free tier forced
 
----
+Free Hugging Face Spaces were the original target. They no longer exist for
+anything with a backend — verified directly against the API:
 
-## Step 0 — you need a WRITE token
+| SDK | Result |
+|---|---|
+| `docker` | 402 — PRO subscription required |
+| `gradio` | 402 — PRO subscription required |
+| `static` | 200 — created |
 
-The token currently in `.env` is **read-only**, which is correct for downloading
-the dataset but will be rejected when uploading.
+Static Spaces serve browser assets and run no Python at all, so a lighter model
+would not have unlocked them. Render is the remaining host with a real Python
+runtime, no card requirement, and free TLS.
 
-1. https://huggingface.co/settings/tokens → **New token**
-2. Type: **Write**
-3. Keep it separate from the read token; you only need it for step 1.
+Fitting 512MB took two changes, both measured, neither optional:
 
-```powershell
-$env:HF_TOKEN_WRITE = "hf_xxxxxxxxxxxx"
-```
-
----
-
-## Step 1 — publish the index artifacts
-
-```powershell
-. .\env.ps1
-python scripts/upload_index.py --repo obscurlabs/ovx-1-index --dry-run   # inspect
-python scripts/upload_index.py --repo obscurlabs/ovx-1-index             # upload
-```
-
-Uploads ~830MB: `dense_i8.usearch`, `bm25.pkl`, `lexical_rows.npy`,
-`chunks_meta.parquet`, `manifest.json`, and `encoder_onnx/*`.
-
-`vectors.f32.npy` (1.7GB) is intentionally excluded — it only exists to rebuild
-indexes without re-embedding, and the server never reads it.
-
----
-
-## Step 2 — create the Space
-
-1. https://huggingface.co/new-space
-2. Owner **obscurlabs**, name **ovx-1**
-3. SDK: **Docker** → *Blank*
-4. Hardware: **CPU basic (free, 16GB RAM)**
-5. Visibility: **Public** (judges need to reach it)
-
----
-
-## Step 3 — push the code
-
-```powershell
-cd D:\Workspace\HHGOA26\townhall-2
-
-git remote add space https://huggingface.co/spaces/obscurlabs/ovx-1
-git push space main
-```
-
-If prompted for a password, use the **write token**, not your account password.
-
-Then replace the Space's `README.md` with `deploy/SPACE_README.md`. Its YAML
-frontmatter is what tells Spaces to use the Dockerfile and expose port 7860 —
-without it the Space will not start correctly. Easiest via the web UI:
-**Files → README.md → edit → paste → commit**.
-
----
-
-## Step 4 — set the secrets
-
-Space → **Settings → Variables and secrets**:
-
-| Name | Value | Notes |
+| | Before | After |
 |---|---|---|
-| `VOICERAG_INDEX_REPO` | `obscurlabs/ovx-1-index` | required |
-| `HF_TOKEN` | read token | only if the dataset repo is private |
+| Query encoder (resident) | 422.7 MB | **123.9 MB** |
+| Chunk metadata (at load) | 2425 MB | **1.1 MB** |
+| Whole service, steady state | — | **457.9 MB** |
+
+The encoder shrank because `multilingual-e5-small` carries a 250k-token
+vocabulary for 100+ languages and this corpus touches 18.1% of it. The embedding
+table is per-tensor quantized, so dropping unused rows is exact — verified
+bit-identical, which is why the index did not need rebuilding for it. Metadata
+moved from ZSTD parquet to memory-mapped Arrow, so rows page in as retrieved
+instead of decompressing 680MB of text at startup.
+
+The deployed index is trimmed to 219,999 chunks (18.9%) by sampling whole
+queries, so every retained query keeps its full passage set and all four
+chunking granularities. See `scripts/trim_index.py` for why it is cut that way.
+
+## 1. Publish the index artifacts
+
+Already done — [`obscurlabs/ovx-1-index`](https://huggingface.co/datasets/obscurlabs/ovx-1-index),
+public, 303MB. Only needed again after rebuilding the index:
+
+```bash
+python scripts/trim_index.py --target-chunks 220000
+HF_TOKEN=<write-token> python scripts/upload_index.py --repo obscurlabs/ovx-1-index
+```
+
+A **write** token is required; the read-only one in `.env` is rejected. Revoke it
+afterwards — the dataset is public, so the server needs no token to read it.
+
+## 2. Create the service
+
+1. Sign in at [render.com](https://render.com) with GitHub — no card.
+2. **New → Blueprint**, pick this repo. `render.yaml` supplies everything:
+   free plan, Singapore region, build and start commands, health check.
+3. Set the three secrets when prompted (they are `sync: false`, so Render asks
+   rather than reading them from the file):
+
+| Variable | Value | Notes |
+|---|---|---|
 | `SARVAM_API_KEY` | your key | speech-to-text |
-| `SARVAM_ALLOW_LIVE` | `0` | see the warning below |
-| `GROQ_API_KEYS` | `key1,key2,key3,key4` | enables deep mode |
+| `SARVAM_ALLOW_LIVE` | `1` for the demo | `0` restricts voice to cached transcripts |
+| `GROQ_API_KEYS` | comma-separated | enables LLM escalation; optional |
 
-### About `SARVAM_ALLOW_LIVE`
+First boot takes ~3 minutes: install, then a 303MB artifact download, then
+warmup. Later restarts skip the download only if the disk survived — on free
+instances it usually does not, so assume the full 3 minutes after a cold start.
 
-Leave it at **`0`** except while recording the demo.
+## 3. Verify
 
-The account holds **100 credits total**. A public URL can be visited by anyone —
-crawlers included — and every uncached recording spends one. At `0`, voice input
-replays cached transcripts and refuses anything unrecognised, so a shared link
-cannot drain the budget. Flip it to `1` immediately before filming, and back to
-`0` afterwards.
-
----
-
-## Step 5 — verify
-
-The build takes 5–10 minutes. Watch **Logs**; a healthy boot ends with:
-
-```
-downloading dense_i8.usearch from obscurlabs/ovx-1-index
-pipeline ready in NNs
-warmed up 6 queries in N.Ns
-Uvicorn running on http://0.0.0.0:7860
+```bash
+curl https://<service>.onrender.com/api/health
 ```
 
-Then:
-
-```powershell
-curl https://obscurlabs-ovx-1.hf.space/api/health
+```json
+{ "ready": true, "chunks": 219999, "lexical_docs": 58685, "voice_enabled": true }
 ```
 
-Expect `ready: true` and `chunks: 1165508`.
+`ready: false` with an `error` field means the pipeline failed; the message says
+why. `ready: false` with `error: null` means it is still loading — wait.
 
----
+```bash
+curl -X POST https://<service>.onrender.com/api/query \
+  -H 'Content-Type: application/json' \
+  -d '{"text":"what is a corporation"}'
+```
+
+Then open the root URL and confirm the microphone prompt appears — that is the
+secure-context check passing.
+
+## 4. Keep it warm — do not skip this
+
+**Render free spins down after 15 minutes of inactivity, and a cold hit costs
+~60 seconds.** The organisers run an eval loop of ~10 queries and score the
+aggregate. One cold request inside that loop is arithmetically fatal:
+
+| Scenario | Mean over 10 |
+|---|---|
+| Warm throughout | ~10 ms |
+| One 1700 ms cold start | 179 ms |
+| One 60 s Render cold start | **6,009 ms** |
+
+Point a free uptime monitor at the health endpoint before judging opens:
+
+- [cron-job.org](https://cron-job.org) or [UptimeRobot](https://uptimerobot.com) — no card
+- URL `https://<service>.onrender.com/api/health`, every **10 minutes**
+
+Free workspaces get 750 instance-hours per month and a month of continuous
+running needs 744, so this fits — but only while this is the **only** free
+service in the workspace. A second one will exhaust the quota and suspend both.
+
+## 5. Cleaning up after submission
+
+Everything heavy is regenerable and confined:
+
+```
+data/           index artifacts, ~2.5GB   (delete freely)
+.cache/         HF + model caches         (delete freely)
+```
+
+Deleting the Render service and the HF dataset repo removes the hosted copies.
 
 ## Troubleshooting
 
-**Build succeeds, container dies immediately.** Check `VOICERAG_INDEX_REPO` is
-set. Without it the app raises at startup — though `/api/health` deliberately
-still responds and reports the reason rather than the container exiting silently.
+**`ready: false`, `missing index artifacts ... VOICERAG_INDEX_REPO is not set`**
+The env var did not reach the service. Confirm it in Render → Environment.
 
-**`401` while downloading artifacts.** The dataset repo is private and `HF_TOKEN`
-is missing or read-scoped incorrectly. Making the dataset public is simpler.
+**`required encoder file model_quantized.onnx unavailable`**
+The dataset repo is private, or the upload did not include `encoder_onnx/`.
+Re-run `upload_index.py` and check the repo's file list.
 
-**First request is slow (~300ms), then fast.** Should not happen — the app warms
-up at boot. If it does, the Space was restarted mid-request.
+**Out of memory / instance restarts under load**
+Something reverted to a pre-trim artifact. Check `/api/health`: `chunks` must be
+219999. If it reports 1165508 the full index is deployed and will not fit.
 
-**Space sleeps.** Free Spaces idle out after ~48h of inactivity. Visit the URL
-once before judging; the warmup runs automatically on wake.
+**Microphone button does nothing**
+The page is being served over `http://`. Use the `https://` URL.
 
-**Voice returns "couldn't transcribe".** Expected with `SARVAM_ALLOW_LIVE=0` for
-any recording not already in the cache. That is the credit guard doing its job.
+**Build fails on `pip install .`**
+Confirm `PYTHON_VERSION` is `3.12.7`; `pyproject.toml` requires `>=3.12,<3.13`.

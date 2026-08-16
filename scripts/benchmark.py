@@ -96,7 +96,7 @@ def main() -> int:
     args = parse_args()
     settings = get_settings()
 
-    if not Paths.onnx_encoder.exists():
+    if not Paths.serving_encoder().exists():
         print("missing ONNX encoder; run scripts/export_onnx.py first")
         return 1
 
@@ -108,7 +108,7 @@ def main() -> int:
     from voicerag.pipeline.retrieval import HybridRetriever
     from voicerag.pipeline.router import AnswerRouter, ExtractiveAnswerer
 
-    retriever = HybridRetriever.load(Paths.indexes, Paths.onnx_encoder, dim=settings.embed_dim)
+    retriever = HybridRetriever.load(Paths.indexes, Paths.serving_encoder(), dim=settings.embed_dim)
 
     llm = None
     if args.llm:

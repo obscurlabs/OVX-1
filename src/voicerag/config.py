@@ -10,7 +10,7 @@ import os
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field, field_validator
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Locally the package is imported from the source tree, so the root is three
@@ -49,8 +49,53 @@ class Paths:
     vector_index = indexes / "dense.usearch"
     bm25_index = indexes / "bm25.pkl"
     chunk_meta = indexes / "chunks_meta.parquet"
+    # What the SERVER reads. Same rows as the parquet, but Arrow IPC and
+    # uncompressed, so it can be memory-mapped rather than decompressed into the
+    # heap. Reading the parquet costs 2425MB of RSS for 138MB of disk (two ZSTD
+    # row groups decompress ~680MB of text in one shot); the mapped file costs
+    # 1.1MB at load and pages in only the rows actually retrieved.
+    chunk_meta_arrow = indexes / "chunks_meta.arrow"
     onnx_encoder = indexes / "encoder_onnx"
+    # Same graph with the unused 82% of the vocabulary removed. The word
+    # embedding table is per-tensor quantized, so dropping rows is exact -
+    # verified bit-identical over corpus and query text - but it takes the
+    # encoder's resident cost from 422.7MB to 123.9MB, because ONNX Runtime
+    # materializes that uint8 table as fp32 (250,037 x 384 x 4 = 384MB).
+    onnx_encoder_pruned = indexes / "encoder_onnx_pruned"
     stt_cache = audio / "transcripts.json"
+
+    @classmethod
+    def serving_index(cls) -> Path:
+        """The index directory the server loads.
+
+        scripts/trim_index.py writes the deployable subset to indexes/serving,
+        so a build machine holds both the full index and the trimmed one. On the
+        host only the trimmed artifacts are ever downloaded, and they land
+        directly in indexes/ - so this resolves to the right place in both
+        without the deployment needing to know which it is.
+        """
+        candidate = cls.indexes / "serving"
+        if (candidate / "manifest.json").exists():
+            return candidate
+        return cls.indexes
+
+    @classmethod
+    def serving_encoder(cls) -> Path:
+        """The encoder the server actually loads.
+
+        Benchmarks and guardrail evals resolve through here too, so local
+        numbers describe the deployed artifact rather than the fuller model
+        that only ever exists on a build machine.
+        """
+        # The encoder that travelled with the deployable index wins: it was
+        # pruned against that corpus, and pairing an index with a differently
+        # pruned encoder would shift every vector silently.
+        bundled = cls.serving_index() / "encoder_onnx"
+        if (bundled / "tokenizer.json").exists():
+            return bundled
+        if (cls.onnx_encoder_pruned / "tokenizer.json").exists():
+            return cls.onnx_encoder_pruned
+        return cls.onnx_encoder
 
     @classmethod
     def ensure(cls) -> None:

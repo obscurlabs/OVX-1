@@ -27,9 +27,61 @@ import time
 from pathlib import Path
 
 import numpy as np
+import pyarrow as pa
+import pyarrow.compute as pc
 import pyarrow.parquet as pq
+from pyarrow import ipc
 
 from voicerag.contracts import DegradationLevel, RetrievalResult, RetrievedChunk
+
+# What _materialize actually reads. Anything else is build-time metadata and
+# would only cost RAM at serve time; query_id in particular is used by the
+# chunker to group passages and never again.
+SERVING_COLUMNS = ("chunk_id", "text", "passage_id", "lang", "strategy", "query_type")
+
+
+def merge_display_text(table: pa.Table) -> pa.Table:
+    """Collapse text/context_text into the one column serving actually uses.
+
+    Retrieval has always answered with `context_text or text` - the wider window
+    when the chunker produced one, the chunk itself otherwise. Storing both
+    means carrying 377MB + 340MB to ever read one of them, so the choice is made
+    once at build time and only the winner is shipped.
+    """
+    if "context_text" not in table.schema.names:
+        return table.select([c for c in SERVING_COLUMNS if c in table.schema.names])
+
+    merged = pc.coalesce(table.column("context_text"), table.column("text"))
+    table = table.set_column(table.schema.get_field_index("text"), "text", merged)
+    return table.select(SERVING_COLUMNS)
+
+
+def load_chunk_meta(index_dir: Path) -> pa.Table:
+    """Chunk metadata, memory-mapped when the serving artifact is present.
+
+    Arrow IPC is read through pa.memory_map, so the table's buffers point
+    straight at the file and the resident cost is only the pages retrieval
+    actually touches. It must be a SINGLE record batch: read_all() on a
+    multi-batch file yields a chunked table, and .take() would then need
+    combine_chunks(), which concatenates every buffer into fresh heap memory and
+    discards the entire benefit of mapping it.
+
+    The parquet branch is the local-development and test fallback. It is the
+    2425MB path; scripts/build_serving_meta.py produces the mapped artifact.
+    """
+    arrow_path = index_dir / "chunks_meta.arrow"
+    if arrow_path.exists():
+        table = ipc.open_file(pa.memory_map(str(arrow_path), "r")).read_all()
+        if table.num_rows and table.column(0).num_chunks != 1:
+            # Fail loudly: silently combining here would restore the 2.4GB cost
+            # in a place nobody would think to look.
+            raise ValueError(
+                f"{arrow_path.name} has {table.column(0).num_chunks} batches, expected 1 - "
+                "rebuild it with scripts/build_serving_meta.py"
+            )
+        return table
+
+    return merge_display_text(pq.read_table(index_dir / "chunks_meta.parquet")).combine_chunks()
 
 # Standard RRF constant. Large enough that the top few ranks are not
 # overwhelmingly dominant, small enough that deep ranks stop mattering.
@@ -84,16 +136,7 @@ class HybridRetriever:
         )
         bm25 = BM25Index.load(index_dir / "bm25.pkl")
         lexical_rows = np.load(index_dir / "lexical_rows.npy")
-        # Kept as an Arrow table rather than Python lists: 1.17M rows of text
-        # cost ~1GB as Python str objects but a fraction of that in Arrow, and
-        # we only ever materialize the ~50 candidate rows per request.
-        #
-        # combine_chunks() is not cosmetic. pq.read_table returns a table backed
-        # by many record batches, and Table.take must then resolve which batch
-        # each row index falls into - measured at ~60ms per request, nine tenths
-        # of total latency. Combining into one contiguous chunk once at startup
-        # makes take O(k) in the number of rows requested.
-        chunk_meta = pq.read_table(index_dir / "chunks_meta.parquet").combine_chunks()
+        chunk_meta = load_chunk_meta(index_dir)
         encoder = OnnxQueryEncoder(encoder_dir)
 
         return cls(dense, bm25, lexical_rows, chunk_meta, encoder)
@@ -206,7 +249,8 @@ class HybridRetriever:
             out.append(
                 RetrievedChunk(
                     chunk_id=meta["chunk_id"],
-                    text=meta["context_text"] or meta["text"],
+                    # Already resolved to context_text-or-text at build time.
+                    text=meta["text"],
                     passage_id=meta["passage_id"],
                     lang=meta["lang"],
                     strategy=meta["strategy"],

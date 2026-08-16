@@ -91,7 +91,7 @@ def main() -> int:
     from voicerag.pipeline.retrieval import HybridRetriever
 
     print("=== loading ===")
-    retriever = HybridRetriever.load(Paths.indexes, Paths.onnx_encoder, dim=settings.embed_dim)
+    retriever = HybridRetriever.load(Paths.indexes, Paths.serving_encoder(), dim=settings.embed_dim)
 
     in_corpus = load_in_corpus(args.in_corpus, args.seed)
     print(f"  in_corpus={len(in_corpus)}  out_of_corpus={len(OUT_OF_CORPUS)}")

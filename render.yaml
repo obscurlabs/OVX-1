@@ -1,0 +1,62 @@
+# Render Blueprint. Import this repo at https://render.com/deploy and the
+# service is created from here rather than from the dashboard by hand.
+#
+# Why a native Python service and not the Dockerfile: Render's free instance
+# gives 512MB, and a Docker build on the free plan spends its build minutes
+# reinstalling the same wheels every deploy. runtime: python installs from
+# pyproject.toml directly and keeps the free build pipeline well inside budget.
+#
+# The 512MB ceiling is the whole design constraint here. Measured steady state
+# is 457.9MB with the trimmed index and the vocabulary-pruned encoder, which
+# leaves ~54MB of headroom. Two changes account for that fitting at all:
+#   - the encoder's unused vocabulary is stripped (422.7MB -> 123.9MB resident)
+#   - chunk metadata is memory-mapped Arrow, not parquet (2425MB -> ~1MB at load)
+# Neither is optional. Reverting either one puts the service over the limit.
+
+services:
+  - type: web
+    name: ovx-1-voice-rag
+    runtime: python
+    plan: free
+    region: singapore # closest free region to India; lowest RTT for the demo
+    branch: main
+
+    buildCommand: pip install --upgrade pip && pip install .
+    startCommand: python -m voicerag.api
+
+    # Render probes this to decide the service is live. It returns 200 while the
+    # pipeline is still loading, with ready:false in the body - deliberately, so
+    # a slow artifact download reports its progress instead of failing the deploy.
+    healthCheckPath: /api/health
+
+    envVars:
+      # Where fetch_artifacts pulls the index from on boot. Public dataset, so
+      # no token is needed to read it.
+      - key: VOICERAG_INDEX_REPO
+        value: obscurlabs/ovx-1-index
+
+      # config.py cannot infer the project root once the package is pip-installed
+      # into site-packages - it would resolve to the interpreter's lib directory
+      # and look for web/ and the index there. State it explicitly.
+      - key: VOICERAG_ROOT
+        value: /opt/render/project/src
+
+      # Keep the HF cache inside the project dir; $HOME is not reliably writable.
+      - key: HF_HOME
+        value: /opt/render/project/src/.cache/hf
+      - key: HF_HUB_DISABLE_SYMLINKS_WARNING
+        value: "1"
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+
+      # Secrets - set these in the Render dashboard, never in this file.
+      - key: SARVAM_API_KEY
+        sync: false
+      # "0" keeps voice on cached transcripts only, so a shared link cannot
+      # drain a 100-credit budget. Set to 1 for the live demo.
+      - key: SARVAM_ALLOW_LIVE
+        sync: false
+      - key: GROQ_API_KEYS
+        sync: false

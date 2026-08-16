@@ -10,6 +10,12 @@ The Space downloads the artifacts on boot (see api.fetch_artifacts), which keeps
 the container image small and lets the index be rebuilt and republished without
 touching the application code.
 
+What is published is the DEPLOYABLE set that scripts/trim_index.py produces -
+the trimmed index plus the vocabulary-pruned encoder it was built against - not
+the full build tree. The two travel together on purpose: the encoder's embedding
+rows were pruned against this corpus, and pairing an index with a differently
+pruned encoder shifts every vector with nothing raising an error.
+
 vectors.f32.npy (1.7GB) is deliberately NOT uploaded: it exists only to rebuild
 indexes without re-embedding, and the server never reads it.
 
@@ -27,8 +33,9 @@ ARTIFACTS = (
     "dense_i8.usearch",
     "bm25.pkl",
     "lexical_rows.npy",
-    "chunks_meta.parquet",
+    "chunks_meta.arrow",
     "manifest.json",
+    "kept_query_ids.json",
 )
 
 ENCODER_FILES = (
@@ -58,20 +65,25 @@ def main() -> int:
         print("downloading the dataset will be rejected.")
         return 1
 
-    missing = [n for n in ARTIFACTS if not (Paths.indexes / n).exists()]
+    index_dir = Paths.serving_index()
+    encoder_dir = Paths.serving_encoder()
+    print(f"source index  : {index_dir}")
+    print(f"source encoder: {encoder_dir}\n")
+
+    missing = [n for n in ARTIFACTS if not (index_dir / n).exists()]
     if missing:
         print(f"missing artifacts: {missing}")
-        print("run scripts/build_index.py first")
+        print("run scripts/trim_index.py first")
         return 1
 
     total = 0
     print("=== to upload ===")
     for name in ARTIFACTS:
-        size = (Paths.indexes / name).stat().st_size
+        size = (index_dir / name).stat().st_size
         total += size
         print(f"  {size / 1024 / 1024:8.1f} MB  {name}")
     for name in ENCODER_FILES:
-        path = Paths.onnx_encoder / name
+        path = encoder_dir / name
         if path.exists():
             size = path.stat().st_size
             total += size
@@ -95,14 +107,14 @@ def main() -> int:
     for name in ARTIFACTS:
         print(f"uploading {name} ...")
         api.upload_file(
-            path_or_fileobj=str(Paths.indexes / name),
+            path_or_fileobj=str(index_dir / name),
             path_in_repo=name,
             repo_id=args.repo,
             repo_type="dataset",
         )
 
     for name in ENCODER_FILES:
-        path = Paths.onnx_encoder / name
+        path = encoder_dir / name
         if not path.exists():
             continue
         print(f"uploading encoder_onnx/{name} ...")
