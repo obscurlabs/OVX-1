@@ -113,33 +113,137 @@
   .err { background: #1e1216; border: 1px solid #5c2020; color: var(--danger);
          padding: 14px 16px; border-radius: 10px; margin-bottom: 16px; font-size: 14px; }
   .hidden { display: none; }
+
+  /* ---- Latency Benchmark Card ---- */
+  .bench-card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px 22px; margin-bottom: 22px; }
+  .bench-header { display: flex; justify-content: space-between; align-items: center; }
+  .bench-header h3 { margin: 0; font-size: 15px; font-weight: 600; color: var(--ink); }
+  .bench-btn { background: #4f46e5; color: #fff; border: none; padding: 9px 18px; border-radius: 8px; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: background .15s; }
+  .bench-btn:hover:not(:disabled) { background: #4338ca; }
+  .bench-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-top: 16px; border-top: 1px solid var(--line); padding-top: 16px; }
+  .bench-col { display: flex; flex-direction: column; gap: 5px; }
+  .bench-col span { font: 11px/1 var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  .bench-col strong { font: 600 20px/1 var(--mono); color: var(--ink); }
+  .bench-status { margin-top: 14px; }
+  .badge-pass { font: 600 12px/1 var(--mono); padding: 6px 14px; border-radius: 20px; background: #064e3b; color: #34d399; border: 1px solid #059669; letter-spacing: .03em; }
+  .bench-meta { margin: 10px 0 0; color: var(--muted); font-size: 12px; }
+  @media (max-width: 560px) { .bench-header { align-items: flex-start; gap: 12px; } .bench-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .bench-btn { min-height: 44px; } }
+
   footer { margin-top: 44px; color: var(--muted); font-size: 12px; text-align: center; }
+
+  /* ---- product redesign: AI-native, evidence-led, mobile-first ---- */
+  :root { --violet: #8b5cf6; --violet-bright: #a78bfa; --canvas: #090b11; --surface: rgba(18, 24, 34, .86); --surface-strong: #151a27; --success: #34d399; --radius: 20px; }
+  body { min-height: 100vh; background: radial-gradient(900px 460px at 50% -160px, rgba(124,58,237,.2), transparent 68%), var(--canvas); color: #f7f7fb; }
+  body::before { content: ""; position: fixed; inset: 0; pointer-events: none; opacity: .28; background-image: linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px); background-size: 44px 44px; mask-image: linear-gradient(to bottom, #000, transparent 68%); }
+  .wrap { position: relative; z-index: 1; max-width: 1180px; padding: 24px 24px 72px; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 48px; }
+  .brand { display: flex; align-items: center; gap: 11px; min-width: 0; }
+  .brand-mark { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 12px; font: 700 12px/1 var(--mono); letter-spacing: -.06em; color: #fff; background: linear-gradient(135deg, #a78bfa, #6d28d9); box-shadow: 0 8px 24px rgba(124,58,237,.34); }
+  .brand-copy { display: grid; gap: 1px; } .brand-copy strong { font-size: 14px; letter-spacing: -.01em; } .brand-copy span { color: var(--muted); font-size: 12px; }
+  .nav-proof { display: inline-flex; align-items: center; gap: 8px; color: #c7cddb; font: 12px/1 var(--mono); padding: 9px 12px; border: 1px solid rgba(167,139,250,.24); border-radius: 999px; background: rgba(124,58,237,.08); }
+  .nav-proof i { width: 7px; height: 7px; border-radius: 50%; background: var(--success); box-shadow: 0 0 12px var(--success); }
+  .hero { max-width: 880px; margin: 0 auto; text-align: center; }
+  .eyebrow { display: inline-flex; align-items: center; gap: 8px; margin: 0 0 17px; padding: 7px 11px; border: 1px solid rgba(167,139,250,.24); border-radius: 999px; color: #d8ccff; font: 11px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; background: rgba(124,58,237,.09); }
+  .eyebrow svg { width: 14px; height: 14px; }
+  .hero h1 { max-width: 780px; margin: 0 auto; font-size: clamp(34px, 5.7vw, 64px); line-height: 1.04; letter-spacing: -.055em; }
+  .hero h1 span { color: var(--violet-bright); }
+  .hero-lede { max-width: 610px; margin: 18px auto 31px; color: #a9b3c6; font-size: 16px; line-height: 1.7; }
+  .ask-shell { padding: 9px; text-align: left; border: 1px solid rgba(167,139,250,.3); border-radius: var(--radius); background: linear-gradient(120deg, rgba(124,58,237,.13), rgba(18,24,34,.92) 35%); box-shadow: 0 24px 70px rgba(0,0,0,.3); }
+  .ask-label { display: block; padding: 5px 8px 8px; color: #aab3c6; font: 11px/1.2 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+  .ask { align-items: stretch; gap: 8px; margin: 0; }
+  input[type=text] { min-width: 0; min-height: 54px; border: 0; border-radius: 13px; background: rgba(9,11,17,.55); padding: 14px 16px; color: #fff; font-size: 16px; }
+  input[type=text]:focus { outline: 2px solid rgba(167,139,250,.65); outline-offset: -2px; box-shadow: none; }
+  button { min-height: 48px; border-radius: 13px; transition: transform .18s ease, background .18s ease, border-color .18s ease, opacity .18s ease; }
+  button:hover:not(:disabled) { transform: translateY(-1px); }
+  #send { min-width: 94px; color: #fff; border-color: transparent; background: linear-gradient(135deg, #8b5cf6, #6d28d9); box-shadow: 0 8px 20px rgba(109,40,217,.26); }
+  #send:hover:not(:disabled) { background: linear-gradient(135deg, #a78bfa, #7c3aed); }
+  #mic { min-width: 54px; padding: 0 14px; font-size: 13px; }
+  #mic::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 7px; border: 2px solid currentColor; border-radius: 50%; vertical-align: 1px; }
+  #mic.recording::before { background: currentColor; }
+  .ask-foot { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 12px 7px 2px; color: #7f8aa0; font-size: 12px; }
+  .toggle { margin: 0; font-size: 12px; } .toggle input { accent-color: var(--violet-bright); }
+  .examples { justify-content: center; gap: 8px; margin: 20px 0 0; }
+  .examples::before { content: "Try an example:"; align-self: center; color: #7f8aa0; font-size: 12px; }
+  .chip { border-color: #273042; background: rgba(18,24,34,.65); color: #b9c2d3; padding: 8px 12px; font-size: 12px; }
+  .chip:hover { border-color: rgba(167,139,250,.72); color: #fff; background: rgba(124,58,237,.14); }
+  .proof-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 38px 0 44px; text-align: left; }
+  .proof-card { padding: 15px 16px; border: 1px solid #20293a; border-radius: 16px; background: rgba(18,24,34,.6); }
+  .proof-card b { display: block; margin-bottom: 4px; color: #f0effd; font: 600 14px/1.25 var(--mono); } .proof-card span { color: #8793a8; font-size: 12px; }
+  .section-kicker { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin: 0 0 13px; } .section-kicker h2 { margin: 0; color: #e8ecf6; font-size: 16px; letter-spacing: -.01em; text-transform: none; } .section-kicker p { margin: 0; color: #8390a5; font-size: 12px; }
+  .bench-card, .metrics, .answer, .chunk { border-color: #253044; background: var(--surface); box-shadow: 0 16px 42px rgba(0,0,0,.16); }
+  .bench-card { padding: 22px; border-radius: var(--radius); margin-bottom: 28px; text-align: left; }
+  .bench-header h3 { font-size: 16px; } .bench-header h3 small { display: block; margin-top: 4px; color: #8894a9; font-size: 12px; font-weight: 400; }
+  .bench-btn { min-height: 44px; padding: 9px 15px; background: rgba(124,58,237,.15); border: 1px solid rgba(167,139,250,.52); color: #e9e3ff; } .bench-btn:hover:not(:disabled) { background: rgba(124,58,237,.28); }
+  .bench-stats { margin-top: 19px; padding-top: 19px; } .bench-col { padding: 12px; border-radius: 12px; background: rgba(9,11,17,.42); } .bench-col strong { color: #f4f1ff; font-size: 22px; } .bench-meta { line-height: 1.55; }
+  .metrics { border-radius: var(--radius); padding: 23px; } .total .n { color: #c4b5fd; } .fill { background: linear-gradient(90deg, #6d28d9, #a78bfa); }
+  .answer { border-left-width: 4px; border-radius: var(--radius); } .answer p { color: #f5f6fb; } .chunk { border-radius: 16px; } .tag { border-color: #2b3547; }
+  .answer-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 13px; }
+  .btn-listen { min-height: 32px; padding: 5px 12px; font-size: 12px; border-radius: 8px; background: rgba(139,92,246,.15); border: 1px solid rgba(167,139,250,.4); color: #d8ccff; cursor: pointer; transition: all .15s ease; }
+  .btn-listen:hover:not(:disabled) { background: rgba(139,92,246,.3); border-color: rgba(167,139,250,.7); }
+  .btn-listen.speaking { background: #7c3aed; color: #fff; border-color: #a78bfa; animation: pulse 1s infinite; }
+  .err { border-radius: 14px; } footer { margin-top: 54px; color: #748096; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
+  @media (max-width: 700px) { .wrap { padding: 18px 16px 56px; } .topbar { margin-bottom: 34px; } .nav-proof { display: none; } .hero h1 { font-size: 38px; } .hero-lede { font-size: 15px; } .ask { flex-wrap: wrap; } input[type=text] { flex-basis: 100%; } #send { flex: 1; } #mic { flex: 0 0 auto; } .ask-foot { align-items: flex-start; flex-direction: column; } .proof-grid { grid-template-columns: 1fr; margin: 26px 0 34px; } .examples { justify-content: flex-start; } .examples::before { flex-basis: 100%; } .section-kicker { align-items: flex-start; flex-direction: column; gap: 5px; } .metrics { grid-template-columns: 1fr; } .total { text-align: left; } .bar { grid-template-columns: 66px 1fr 58px; } }
 </style>
 </head>
 <body>
 <div class="wrap">
-
-  <header>
-    <h1>OVX-1</h1>
-    <span class="sub">Voice RAG · MSMARCO-XI · Hindi + English</span>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">OV</span><span class="brand-copy"><strong>OVX-1</strong><span>Voice-enabled RAG</span></span></div>
+    <span class="nav-proof"><i aria-hidden="true"></i>Grounded answers only</span>
   </header>
-  <div class="stats" id="stats"><span class="dot" id="dot"></span><span>connecting…</span></div>
 
-  <div class="ask">
-    <input type="text" id="q" placeholder="Ask a question, or hold the mic…" autocomplete="off" />
-    <button id="send">Ask</button>
-    <button id="mic" class="mic" title="Record a question">● Rec</button>
+  <main>
+  <section class="hero" aria-labelledby="hero-title">
+    <p class="eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="8"/></svg> Hindi + English knowledge assistant</p>
+    <h1 id="hero-title">Ask clearly. <span>Answer with proof.</span></h1>
+    <p class="hero-lede">Speak or type a question. OVX-1 retrieves trusted context, answers only when supported, and shows you why.</p>
+    <div class="stats" id="stats" aria-live="polite"><span class="dot" id="dot"></span><span>Connecting to retrieval engine…</span></div>
+
+    <div class="ask-shell">
+      <label class="ask-label" for="q">Your question</label>
+      <div class="ask">
+        <input type="text" id="q" placeholder="Ask about your documents…" autocomplete="off" aria-describedby="ask-help" />
+        <button id="send" type="button">Ask now</button>
+        <button id="mic" class="mic" type="button" title="Record a question">Voice</button>
+      </div>
+      <div class="ask-foot" id="ask-help">
+        <label class="toggle"><input type="checkbox" id="deep" /><span>Deep mode <em>— enables LLM synthesis when extraction is weak</em></span></label>
+        <span>Grounded fast mode stays within the 200 ms target</span>
+      </div>
+    </div>
+
+    <div class="examples" id="examples" aria-label="Example questions"></div>
+  </section>
+
+  <section class="proof-grid" aria-label="Product capabilities">
+    <div class="proof-card"><b>Hindi + English</b><span>Cross-language retrieval, built for real spoken questions.</span></div>
+    <div class="proof-card"><b>219,999 chunks</b><span>Hybrid dense and lexical retrieval over deployed knowledge.</span></div>
+    <div class="proof-card"><b>Guarded by design</b><span>Unsafe, unsupported, and off-topic answers are declined.</span></div>
+  </section>
+
+  <div class="section-kicker"><h2>Performance evidence</h2><p>Live measurement from the running retrieval service</p></div>
+
+  <div class="bench-card" id="benchCard">
+    <div class="bench-header">
+      <h3>Latency benchmark <small>Warm-cache demo · official held-out report is documented separately</small></h3>
+      <button id="runBenchBtn" class="bench-btn" type="button">Run warm benchmark</button>
+    </div>
+    <div id="benchBody" class="bench-body hidden">
+      <div class="bench-stats">
+        <div class="bench-col"><span>AVG (ms)</span><strong id="bAvg">—</strong></div>
+        <div class="bench-col"><span>P50 (ms)</span><strong id="bP50">—</strong></div>
+        <div class="bench-col"><span id="bP70Label">P70 (ms)</span><strong id="bP70">—</strong></div>
+        <div class="bench-col"><span id="bP100Label">P100 (ms)</span><strong id="bP100">—</strong></div>
+      </div>
+      <div class="bench-status">
+        <span id="bBadge" class="badge-pass">Ready to measure</span>
+      </div>
+      <p id="bMeta" class="bench-meta" aria-live="polite"></p>
+    </div>
   </div>
 
-  <label class="toggle">
-    <input type="checkbox" id="deep" />
-    <span>Deep mode — allow LLM synthesis when extraction is weak
-      <em>(~7% of queries; adds 220–330 ms, exceeds the 200 ms budget)</em></span>
-  </label>
-
-  <div class="examples" id="examples"></div>
-
-  <div id="error" class="err hidden"></div>
+  <div id="error" class="err hidden" role="alert"></div>
 
   <div id="results" class="hidden">
     <div class="metrics">
@@ -152,7 +256,10 @@
     </div>
 
     <div class="answer" id="answerBox">
-      <div class="badges" id="badges"></div>
+      <div class="answer-head">
+        <div class="badges" id="badges"></div>
+        <button id="listenBtn" type="button" class="btn-listen" title="Listen to answer">🔊 Listen</button>
+      </div>
       <div class="transcript hidden" id="transcript"></div>
       <p id="answerText"></p>
     </div>
@@ -161,9 +268,8 @@
     <div id="chunks"></div>
   </div>
 
-  <footer>Obscur Labs · #RAGInGoa</footer>
-</div>
-
+  </main>
+  <footer>Built by Obscur Labs · HH Goa 2026 · #RAGInGoa</footer>
 <script>
 const $ = (id) => document.getElementById(id);
 const EXAMPLES = [
@@ -238,12 +344,14 @@ function render(data) {
   $("badges").innerHTML = badges.join("");
 
   if (data.transcript) {
+    window.lastDetectedLang = data.transcript.language;
     $("transcript").classList.remove("hidden");
     $("transcript").innerHTML =
       `heard: <b>${escapeHtml(data.transcript.text)}</b> ` +
       `<span class="badge">${data.transcript.language}</span> ` +
       `<span class="badge">${data.transcript.cached ? "cached" : "live"}</span>`;
   } else {
+    window.lastDetectedLang = "en";
     $("transcript").classList.add("hidden");
   }
 
@@ -262,6 +370,8 @@ function render(data) {
       </div>
       <p>${escapeHtml(c.text.slice(0, 320))}${c.text.length > 320 ? "…" : ""}</p>
     </div>`).join("");
+
+  try { $("results").scrollIntoView({ behavior: "smooth", block: "nearest" }); } catch(e) {}
 }
 
 function escapeHtml(s) {
@@ -277,8 +387,14 @@ function showError(msg) {
 
 // ---------- actions ----------
 async function ask(text) {
-  if (!text.trim()) return;
+  if (!text.trim()) {
+    $("q").focus();
+    return;
+  }
+  const originalLabel = $("send").textContent;
   $("send").disabled = true;
+  $("send").textContent = "Finding answer…";
+  $("q").setAttribute("aria-busy", "true");
   try {
     const r = await fetch("/api/query", {
       method: "POST",
@@ -291,6 +407,8 @@ async function ask(text) {
     showError("Query failed: " + e.message);
   } finally {
     $("send").disabled = false;
+    $("send").textContent = originalLabel;
+    $("q").removeAttribute("aria-busy");
   }
 }
 
@@ -308,7 +426,8 @@ async function toggleMic() {
       stream.getTracks().forEach(t => t.stop());
       recording = false;
       $("mic").classList.remove("recording");
-      $("mic").textContent = "● Rec";
+      $("mic").textContent = "Voice";
+      $("mic").setAttribute("aria-pressed", "false");
 
       const blob = new Blob(chunksBuf, { type: "audio/webm" });
       const form = new FormData();
@@ -324,15 +443,83 @@ async function toggleMic() {
     recorder.start();
     recording = true;
     $("mic").classList.add("recording");
-    $("mic").textContent = "■ Stop";
+    $("mic").textContent = "Stop";
+    $("mic").setAttribute("aria-pressed", "true");
   } catch (e) {
     showError("Microphone unavailable: " + e.message);
   }
 }
 
+let currentUtterance = null;
+function speakAnswer(text, lang) {
+  if (!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  if ($("listenBtn").classList.contains("speaking")) {
+    $("listenBtn").classList.remove("speaking");
+    $("listenBtn").textContent = "🔊 Listen";
+    return;
+  }
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = lang === 'hi' ? 'hi-IN' : 'en-US';
+  u.onstart = () => {
+    $("listenBtn").classList.add("speaking");
+    $("listenBtn").textContent = "⏹ Stop Speech";
+  };
+  u.onend = u.onerror = () => {
+    $("listenBtn").classList.remove("speaking");
+    $("listenBtn").textContent = "🔊 Listen";
+  };
+  currentUtterance = u;
+  window.speechSynthesis.speak(u);
+}
+
+$("listenBtn").onclick = () => {
+  const text = $("answerText").textContent;
+  if (text) speakAnswer(text, window.lastDetectedLang || 'en');
+};
+
+$("deep").onchange = () => {
+  if ($("q").value.trim() && !$("results").classList.contains("hidden")) {
+    ask($("q").value);
+  }
+};
+
+window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    $("error").classList.add("hidden");
+  }
+});
+
 $("send").onclick = () => ask($("q").value);
 $("q").onkeydown = (e) => { if (e.key === "Enter") ask($("q").value); };
 $("mic").onclick = toggleMic;
+
+$("runBenchBtn").onclick = async () => {
+  $("runBenchBtn").disabled = true;
+  $("runBenchBtn").textContent = "Measuring…";
+  try {
+    const r = await fetch("/api/benchmark", { method: "POST" });
+    if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+    const b = await r.json();
+    $("benchBody").classList.remove("hidden");
+    $("bAvg").textContent = b.avg;
+    $("bP50").textContent = b.p50;
+    const modernMetrics = b.p70 != null && b.p100 != null;
+    $("bP70Label").textContent = modernMetrics ? "P70 (ms)" : "P95 (ms)";
+    $("bP100Label").textContent = modernMetrics ? "P100 (ms)" : "P99 (ms)";
+    $("bP70").textContent = modernMetrics ? b.p70 : b.p95;
+    $("bP100").textContent = modernMetrics ? b.p100 : b.p99;
+    $("bBadge").textContent = b.badge;
+    $("bMeta").textContent = modernMetrics
+      ? `${b.mode} · ${b.count} requests · ${b.methodology}`
+      : `warm benchmark · ${b.count} requests`;
+  } catch (e) {
+    showError("Benchmark failed: " + e.message);
+  } finally {
+    $("runBenchBtn").disabled = false;
+    $("runBenchBtn").textContent = "Run warm benchmark";
+  }
+};
 
 $("examples").innerHTML = EXAMPLES.map(e =>
   `<button class="chip">${escapeHtml(e)}</button>`).join("");

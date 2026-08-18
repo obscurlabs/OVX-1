@@ -23,6 +23,17 @@ and answers **only** from what it retrieved — or tells you it can't.
 Measured on the real serving path — ONNX-int8 encoder on **CPU**, not the GPU
 used for indexing. Reproduce with `python scripts/benchmark.py -n 400`.
 
+### Live demo versus official benchmark
+
+The UI includes a **warm-cache demo benchmark** so a reviewer can see the
+running service respond on the deployed index. It reports P50, P70, and P100
+over 30 fixed Hindi/English queries after the index and bounded query caches
+are warm. It is intentionally labelled as a demo measurement.
+
+The official evidence remains `scripts/benchmark.py -n 400`: held-out MS MARCO
+queries, cache-independent methodology, and the full per-stage report. Never
+compare the two as though they measure the same workload.
+
 > **On P100.** It is the single worst request in the run, so it is inherently
 > noisy: across runs it ranged **16.8 ms – 42.5 ms** depending on background
 > load. We report the latest run rather than the best one. P50 and P70 are
@@ -301,6 +312,11 @@ Honest, and the clearest place to improve — a cross-encoder reranker would hel
 but at ~30–50 ms per pair on CPU it does not fit the budget. Stated rather than
 omitted.
 
+**Deployment uses a trimmed 220k-chunk artifact.** The full 1.17M-chunk index
+is the reproducible research/evaluation index; the Render-free deployment keeps
+whole query groups and all retained chunking strategies so it fits inside 512 MB.
+Its live-demo metrics are reported separately from the full-index evidence.
+
 **No neural reranker**, for that reason. Fusion plus strategy priors does the
 reordering.
 
@@ -318,8 +334,8 @@ naturally outrank cross-language ones, so it is not the default behaviour.
 
 ## Stack
 
-Sarvam Saarika (STT, chosen over ElevenLabs because the corpus is Indic) ·
+Sarvam Saaras v3 (STT, chosen over ElevenLabs because the corpus is Indic) ·
 multilingual-e5-small (ONNX int8) · usearch HNSW · custom BM25 ·
-Groq llama-3.1-8b-instant · FastAPI · Hugging Face Spaces.
+Groq llama-3.1-8b-instant · FastAPI · Render.
 
 Total running cost: **$0.**

@@ -93,6 +93,10 @@ class RetrievalResult(BaseModel):
     dense_ms: float = 0.0
     lexical_ms: float = 0.0
     fuse_ms: float = 0.0
+    # Exact repeated public queries can reuse their grounded retrieval set.
+    # The trace still exposes this so a warm-cache demo is never confused with
+    # a fresh held-out benchmark.
+    cache_hit: bool = False
 
 
 class GuardVerdict(BaseModel):

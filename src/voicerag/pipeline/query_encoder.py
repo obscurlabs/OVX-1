@@ -13,6 +13,8 @@ quality collapses with no error raised anywhere.
 
 from __future__ import annotations
 
+import unicodedata
+from collections import OrderedDict
 from pathlib import Path
 
 import numpy as np
@@ -23,12 +25,22 @@ class OnnxQueryEncoder:
 
     QUERY_PREFIX = "query: "
 
-    def __init__(self, model_dir: Path, max_length: int = 128, threads: int = 2) -> None:
+    def __init__(
+        self,
+        model_dir: Path,
+        max_length: int = 128,
+        threads: int = 2,
+        cache_size: int = 512,
+    ) -> None:
         import onnxruntime as ort
         from tokenizers import Tokenizer
 
         self.model_dir = Path(model_dir)
         self.max_length = max_length
+        # A true LRU keeps recurring demo and common queries fast without
+        # allowing cache growth to threaten the 512 MB deployment tier.
+        self._cache: OrderedDict[str, np.ndarray] = OrderedDict()
+        self._cache_size = cache_size
 
         tokenizer_path = self.model_dir / "tokenizer.json"
         if not tokenizer_path.exists():
@@ -56,7 +68,21 @@ class OnnxQueryEncoder:
         self.model_path = model_path
 
     def encode(self, text: str) -> np.ndarray:
-        return self.encode_batch([text])[0]
+        # NFC avoids duplicate entries for canonically equivalent Hindi text.
+        key = unicodedata.normalize("NFC", text.strip()).casefold()
+        cached = self._cache.get(key)
+        if cached is not None:
+            self._cache.move_to_end(key)
+            return cached.copy()
+        vec = self.encode_batch([text])[0]
+        if self._cache_size > 0:
+            # Keep an owned copy: downstream consumers must not be able to
+            # mutate the cache by modifying the vector returned on a cache miss.
+            self._cache[key] = vec.copy()
+            self._cache.move_to_end(key)
+            if len(self._cache) > self._cache_size:
+                self._cache.popitem(last=False)
+        return vec
 
     def encode_batch(self, texts: list[str]) -> np.ndarray:
         encodings = [self.tokenizer.encode(self.QUERY_PREFIX + t) for t in texts]

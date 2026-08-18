@@ -24,6 +24,8 @@ beats a 500.
 from __future__ import annotations
 
 import time
+import unicodedata
+from collections import OrderedDict
 from pathlib import Path
 
 import numpy as np
@@ -117,6 +119,12 @@ class HybridRetriever:
         self.query_encoder = query_encoder
         self.dense_weight = dense_weight
         self.lexical_weight = lexical_weight
+        # Small and bounded: cached results contain display text, so retaining
+        # thousands would cost more RAM than the latency win is worth.
+        self._query_cache: OrderedDict[tuple[str, int, int, str | None], RetrievalResult] = (
+            OrderedDict()
+        )
+        self._query_cache_size = 128
 
     # -- loading ------------------------------------------------------------
 
@@ -153,6 +161,29 @@ class HybridRetriever:
         # Over-retrieve before fusion: a document ranked 40th by one index may be
         # 2nd by the other, and truncating early throws that signal away.
         candidate_k = candidate_k or top_k * 2
+        cache_key = (
+            unicodedata.normalize("NFC", query.strip()).casefold(),
+            top_k,
+            candidate_k,
+            lang,
+        )
+        cached = self._query_cache.get(cache_key)
+        if cached is not None:
+            self._query_cache.move_to_end(cache_key)
+            # Pydantic models are mutable. Return a deep copy so a caller can
+            # never corrupt the shared cache by annotating a retrieved chunk.
+            return cached.model_copy(
+                update={
+                    "cache_hit": True,
+                    # Timings describe work performed for *this* request, not
+                    # the earlier request that populated the cache.
+                    "encode_ms": 0.0,
+                    "dense_ms": 0.0,
+                    "lexical_ms": 0.0,
+                    "fuse_ms": 0.0,
+                },
+                deep=True,
+            )
 
         dense_ranked: list[int] = []
         dense_scores: dict[int, float] = {}
@@ -202,7 +233,7 @@ class HybridRetriever:
         rows = self._materialize(fused, dense_scores, lexical_scores, top_k, lang)
         fuse_ms = (time.perf_counter() - started) * 1000
 
-        return RetrievalResult(
+        result = RetrievalResult(
             chunks=rows,
             degradation=degradation,
             n_dense=len(dense_ranked),
@@ -212,6 +243,14 @@ class HybridRetriever:
             lexical_ms=lexical_ms,
             fuse_ms=fuse_ms,
         )
+        # Never cache a degraded result: after a transient index error, the
+        # next request deserves a fresh attempt at the full retrieval stack.
+        if result.degradation is DegradationLevel.FULL:
+            self._query_cache[cache_key] = result.model_copy(deep=True)
+            self._query_cache.move_to_end(cache_key)
+            if len(self._query_cache) > self._query_cache_size:
+                self._query_cache.popitem(last=False)
+        return result
 
     def _fuse(self, dense_ranked: list[int], lexical_ranked: list[int]) -> list[tuple[int, float]]:
         scores: dict[int, float] = {}

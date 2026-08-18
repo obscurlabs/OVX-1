@@ -161,8 +161,12 @@ class VoiceRagPipeline:
         trace.add(
             Stage.RETRIEVE,
             timer.ms - retrieval.encode_ms,
-            note=f"dense={retrieval.dense_ms:.1f}ms lexical={retrieval.lexical_ms:.1f}ms "
-            f"fuse={retrieval.fuse_ms:.1f}ms",
+            note=(
+                "cache"
+                if retrieval.cache_hit
+                else f"dense={retrieval.dense_ms:.1f}ms lexical={retrieval.lexical_ms:.1f}ms "
+                f"fuse={retrieval.fuse_ms:.1f}ms"
+            ),
         )
         trace.degradation = retrieval.degradation
 
