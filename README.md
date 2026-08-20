@@ -7,7 +7,7 @@ and answers **only** from what it retrieved — or tells you it can't.
 
 **Obscur Labs** — Yaksh Bambhroliya, Vansh Dobariya · HH Goa 2026 Task 2 · `#RAGInGoa`
 
-**Live:** _<fill in after deploying — see [deploy/DEPLOY.md](deploy/DEPLOY.md)>_
+**Live:** <https://ovx-1-voice-rag.onrender.com/> — see [deploy/DEPLOY.md](deploy/DEPLOY.md)
 
 ---
 
