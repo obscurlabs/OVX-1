@@ -216,7 +216,9 @@ def run_case(base: str, name: str, text: str, expected: set[str], deep: bool) ->
     print(f"\n  {mark} {C.BOLD}{C.CREAM}{name}{C.RESET}  {C.GREY}{text}{C.RESET}")
     print(
         f"      {colour}{C.BOLD}{decision.upper():<8}{C.RESET}"
-        f"{C.GREY}route {C.RESET}{C.CREAM}{body['answer'].get('route') or '—':<10}{C.RESET}"
+        # Padded to 12: "extractive" is exactly 10 characters, so a :<10 field
+        # left no gap at all before the next label.
+        f"{C.GREY}route {C.RESET}{C.CREAM}{body['answer'].get('route') or '—':<12}{C.RESET}"
         f"{C.GREY}pipeline {C.RESET}{latency_colour(pipeline_ms)}{pipeline_ms:6.2f} ms{C.RESET}"
         f"{C.GREY}  wall {wall:.0f} ms{C.RESET}"
     )

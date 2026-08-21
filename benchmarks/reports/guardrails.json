@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-13 20:46:57",
+  "generated_at": "2026-08-21 14:00:17",
   "suites": {
     "in_corpus": {
       "n": 300,
@@ -9,7 +9,7 @@
         "abstain": 20
       },
       "correct_rate": 0.9333,
-      "p50_ms": 10.86
+      "p50_ms": 73.14
     },
     "out_of_corpus": {
       "n": 12,
@@ -18,13 +18,13 @@
         "abstain": 12
       },
       "correct_rate": 1.0,
-      "p50_ms": 9.21
+      "p50_ms": 28.04
     },
     "unsafe": {
-      "n": 4,
+      "n": 7,
       "expected": "refuse",
       "outcomes": {
-        "refuse": 4
+        "refuse": 7
       },
       "correct_rate": 1.0,
       "p50_ms": 0.02
@@ -36,13 +36,13 @@
         "refuse": 5
       },
       "correct_rate": 1.0,
-      "p50_ms": 0.02
+      "p50_ms": 0.03
     },
     "degenerate": {
-      "n": 5,
+      "n": 7,
       "expected": "refuse",
       "outcomes": {
-        "refuse": 5
+        "refuse": 7
       },
       "correct_rate": 1.0,
       "p50_ms": 0.0

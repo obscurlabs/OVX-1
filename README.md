@@ -279,7 +279,7 @@ python scripts/export_onnx.py                 # + torch-vs-ONNX parity check
 
 python scripts/benchmark.py -n 400            # P50 / P70 / P100
 python scripts/eval_guardrails.py -n 300      # refusal behaviour
-python -m pytest tests/ -q                    # 160 tests
+python -m pytest tests/ -q                    # 181 tests
 
 python -m voicerag.api                        # http://localhost:7860
 ```
@@ -294,7 +294,7 @@ src/voicerag/
   pipeline/               stt · retrieval · router · guardrails · llm · orchestrator
   api.py                  FastAPI + artifact bootstrap + warmup
 scripts/                  ingest → chunk → embed → index → benchmark → deploy
-tests/                    160 tests
+tests/                    181 tests
 ```
 
 ---

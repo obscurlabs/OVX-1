@@ -44,7 +44,14 @@ from voicerag.contracts import GuardVerdict, RetrievedChunk
 _UNSAFE_PATTERNS = [
     re.compile(p, re.IGNORECASE)
     for p in (
-        r"\bhow (?:to|do i) (?:make|build|construct)\s+(?:a\s+)?(?:bomb|explosive|nerve agent)",
+        # The gap between the verb and the object has to tolerate modifiers.
+        # "how do i build a pipe bomb at home" previously slipped through: the
+        # old pattern allowed only an article between "build" and "bomb", so
+        # any adjective at all - pipe, nail, pressure cooker - defeated it. The
+        # gap is bounded and excludes sentence punctuation so the match cannot
+        # run across clauses into an unrelated noun.
+        r"\bhow (?:to|do i) (?:make|build|construct|assemble)\b[\w\s'-]{0,30}?"
+        r"\b(?:bombs?|explosives?|grenades?|molotov|napalm|nerve agents?|chemical weapons?)\b",
         r"\b(?:synthesi[sz]e|manufacture)\s+(?:meth|methamphetamine|fentanyl|sarin|ricin)",
         r"\bhow (?:to|do i) (?:kill|murder|poison)\s+(?:someone|a person|my)",
         r"\bchild\s+(?:porn|sexual abuse)",
@@ -101,6 +108,21 @@ class InputGuard:
                 category="empty",
                 reason="I couldn't make out any speech in that recording.",
             )
+
+        # A held key, a stuck mic or a hum transcribes to a run of one repeated
+        # character. "aaaaaaaaaa" clears every check above - it is long enough,
+        # it is one word, it is letters - and then retrieves real chunks and
+        # gets answered from whichever passage happens to share the run. Every
+        # token being a single repeated character is the signal; a query with
+        # any genuine word in it keeps its distinct characters and passes.
+        tokens = _tokens(stripped)
+        if tokens and all(len(set(token)) == 1 for token in tokens):
+            if max(len(token) for token in tokens) >= 3:
+                return GuardVerdict(
+                    allowed=False,
+                    category="degenerate",
+                    reason="I couldn't make out a question there. Could you try again?",
+                )
 
         for pattern in _UNSAFE_PATTERNS:
             if pattern.search(stripped):

@@ -164,22 +164,37 @@ h1, h2, h3 {
 .wrap {
   width: min(1180px, 100%); margin-inline: auto;
   padding: 0 clamp(14px, 4vw, 32px) 40px;
-  /* `clip` rather than `hidden`: it creates no scroll container, so the full
-     bleed decor can hang past the column without a horizontal scrollbar. */
-  overflow-x: clip;
 }
 
 /* ---------- hero --------------------------------------------------------- */
 
-.hero { position: relative; padding: clamp(26px, 5vw, 52px) 0 clamp(18px, 3vw, 28px); text-align: center; }
+/* The hero spans the page rather than the column, so its decor can bleed to
+   the window edge by being 100% of something — no viewport units involved.
+   100vw was the bug: it counts the classic scrollbar, so the decor was always
+   ~15px wider than the client area, which is why the clip that hid the
+   overflow had to live somewhere. On .wrap that clip guillotined the branch at
+   the column edge; here nothing overflows in the first place. */
+.hero {
+  position: relative;
+  padding: clamp(26px, 5vw, 52px) 0 clamp(18px, 3vw, 28px);
+  text-align: center;
+  /* Both axes: horizontally so the branch bleeds off the window edge and is
+     cut there, vertically so it stops at the hero's top edge instead of
+     showing through the translucent topbar above it. */
+  overflow: clip;
+}
 .hero > *:not(.hero-deco) { position: relative; z-index: 1; }
 
-/* Broken out of the column to the full window width: the branch has to run off
-   the side of the screen, not stop short of it. */
+/* The centred column the hero's own content sits in, matching .wrap. */
+.hero-in {
+  position: relative; z-index: 1;
+  width: min(1180px, 100%); margin-inline: auto;
+  padding-inline: clamp(14px, 4vw, 32px);
+}
+
 .hero-deco {
-  position: absolute; inset: 0 auto 0 50%;
-  width: 100vw; transform: translateX(-50%);
-  overflow: clip; pointer-events: none; z-index: 0;
+  position: absolute; inset: 0; width: 100%;
+  pointer-events: none; z-index: 0;
 }
 .hero-deco span { position: absolute; display: block; background: no-repeat center / contain; }
 .hero-deco .sakura {
@@ -444,7 +459,7 @@ input[type=text]:focus { border-color: var(--yellow); background: rgba(4, 34, 15
 
 .hero-deco .tategaki {
   writing-mode: vertical-rl;
-  top: 196px; right: max(20px, calc(50% - 588px));
+  top: 196px; right: max(20px, calc(50% - 590px));
   width: auto; height: auto; max-height: 290px;
   font: 700 15px/2 'Yu Mincho', 'Hiragino Mincho ProN', 'Noto Serif JP', 'MS Mincho', serif;
   letter-spacing: .2em;
@@ -474,17 +489,93 @@ input[type=text]:focus { border-color: var(--yellow); background: rgba(4, 34, 15
   letter-spacing: .16em; text-transform: uppercase;
 }
 
+/* ---------- benchmark dock ------------------------------------------------
+   The evidence is a thing you go and check, not a thing you scroll past, so it
+   lives in a dock rather than in the page flow. <details> holds the open state,
+   so the toggle costs no script: the summary is the button, the panel is the
+   disclosed content, and the keyboard and aria wiring come for free. */
+
+.bench-dock {
+  --dock-gutter: clamp(14px, 3vw, 26px);
+  /* Full width along the bottom rather than a 62px corner box. <details> wraps
+     its content in ::details-content, which makes the dock the containing block
+     for the panel inside — so a corner-sized dock resolved the panel's left and
+     right against 62px and collapsed it. Spanning the viewport also means every
+     offset here resolves against the client width, so the panel needs no
+     viewport units at all: 100vw counts the scrollbar and would overflow. */
+  position: fixed; inset: auto 0 0 0; z-index: 60;
+  display: flex; justify-content: flex-end;
+  padding: var(--dock-gutter);
+  /* The bar itself must not swallow clicks meant for the page beneath it. */
+  pointer-events: none;
+}
+
+.bench-fab {
+  pointer-events: auto;
+  display: grid; place-items: center;
+  width: 62px; height: 62px; border-radius: 50%;
+  background: var(--yellow); color: var(--ink);
+  border: 2px solid var(--ink); box-shadow: 3px 3px 0 var(--ink);
+  cursor: pointer; user-select: none;
+  transition: transform .12s ease, box-shadow .12s ease, background .14s ease;
+}
+/* The disclosure triangle has to go in both engines. */
+.bench-fab { list-style: none; }
+.bench-fab::-webkit-details-marker { display: none; }
+
+.bench-fab:hover { background: var(--yellow-dim); }
+.bench-fab:active { transform: translate(3px, 3px); box-shadow: 0 0 0 var(--ink); }
+.bench-fab:focus-visible { outline: 3px solid var(--pink); outline-offset: 3px; }
+
+/* 速 - speed. Swapped for a close mark once the panel is open, so the one
+   control reads as both the way in and the way out. */
+.fab-glyph {
+  font: 700 24px/1 'Yu Gothic', 'Hiragino Sans', 'Noto Sans JP', 'MS Gothic', sans-serif;
+}
+.fab-glyph::before { content: '速'; }
+/* The literal mark, not an escape: CSS consumes up to six hex digits, so
+   '¹5' without a terminating space parsed as U+0271 followed by "5". */
+.bench-dock[open] .fab-glyph::before { content: '✕'; font-size: 21px; }
+.bench-dock[open] .bench-fab { background: var(--pink); color: var(--cream); }
+
+.bench-panel {
+  pointer-events: auto;
+  position: absolute; right: var(--dock-gutter);
+  /* Clears the button it grew from: the gutter below it, the 62px button, and
+     a gap. */
+  bottom: calc(var(--dock-gutter) + 74px);
+  /* Never wider than the screen less its gutters, so one rule covers phone and
+     desktop and the panel can never cause a horizontal scrollbar. */
+  width: min(430px, calc(100% - 2 * var(--dock-gutter)));
+  max-height: min(74vh, 620px); overflow-y: auto;
+  text-align: left;
+  animation: dock-in .18s ease-out;
+}
+@keyframes dock-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.bench-invite {
+  margin: 12px 0 14px; color: rgba(255, 251, 232, .78);
+  font-size: 12.5px; line-height: 1.6;
+}
+.bench-dock .bench-btn { width: 100%; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bench-panel { animation: none; }
+}
+
 /* ---------- benchmark ---------------------------------------------------- */
-.bench-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
-.bench-header h3 { font-size: clamp(22px, 3vw, 30px); color: var(--yellow); max-width: 30ch; }
+.bench-header h3 { font-size: 26px; color: var(--yellow); }
 .bench-header h3 small {
   display: block; margin-top: 6px; font-family: var(--mono);
   color: rgba(255, 251, 232, .6); font-size: 11px; font-weight: 400;
   letter-spacing: .1em; text-transform: uppercase; line-height: 1.5;
 }
 .bench-stats {
-  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px; margin-top: 18px; padding-top: 18px;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px; margin-top: 18px; padding-top: 18px;
   border-top: 2px solid rgba(254, 225, 1, .28);
 }
 .bench-col {
@@ -663,7 +754,6 @@ input[type=text]:focus { border-color: var(--yellow); background: rgba(4, 34, 15
 
 @media (max-width: 760px) {
   .topbar .meta { display: none; }
-  .bench-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .metrics { grid-template-columns: 1fr; gap: 16px; }
   .total { text-align: left; min-width: 0; }
   .bar { grid-template-columns: 64px 1fr 58px; }
@@ -714,14 +804,14 @@ input[type=text]:focus { border-color: var(--yellow); background: rgba(4, 34, 15
   <span class="lantern" aria-hidden="true"></span>
 </header>
 
-<div class="wrap">
-  <main>
+<main>
   <section class="hero" aria-labelledby="hero-title">
     <div class="hero-deco" aria-hidden="true">
       <span class="sakura"></span>
       <span class="tategaki">声で問い、証拠で答える</span>
     </div>
 
+    <div class="hero-in">
     <p class="seal">Shortlisting Task 2 · Voice RAG</p>
     <h1 id="hero-title">ASK<span class="sticker">वाणी</span>ANSWER</h1>
 
@@ -758,39 +848,15 @@ input[type=text]:focus { border-color: var(--yellow); background: rgba(4, 34, 15
       </div>
       <div class="examples" id="examples" aria-label="Example questions"></div>
     </div>
+    </div>
   </section>
 
+  <div class="wrap">
   <section class="proof-grid" aria-label="Pipeline capabilities">
     <div class="panel proof-card"><b><span class="deva">हिंदी</span> + EN</b><span>Cross-language retrieval over the ai4bharat MSMARCO-XI dataset, built for spoken questions.</span></div>
     <div class="panel proof-card"><b>5 strategies</b><span>Fixed, semantic, sentence-window, metadata-aware and passage chunking, fused with RRF.</span></div>
     <div class="panel proof-card"><b>3 gates</b><span>Unsafe, off-topic and ungrounded answers are refused before they reach you.</span></div>
   </section>
-
-  <div class="section-kicker">
-    <h2><span class="torii" aria-hidden="true"></span>Performance evidence</h2>
-    <p>Live measurement from the running service</p>
-  </div>
-
-  <div class="panel bench-card" id="benchCard">
-    <div class="bench-header">
-      <h3>Latency benchmark
-        <small>Warm-cache demo · held-out report documented separately</small>
-      </h3>
-      <button id="runBenchBtn" class="btn btn-ghost bench-btn" type="button">Run warm benchmark</button>
-    </div>
-    <div id="benchBody" class="bench-body hidden">
-      <div class="bench-stats">
-        <div class="bench-col"><span>AVG (ms)</span><strong id="bAvg">—</strong></div>
-        <div class="bench-col"><span>P50 (ms)</span><strong id="bP50">—</strong></div>
-        <div class="bench-col"><span id="bP70Label">P70 (ms)</span><strong id="bP70">—</strong></div>
-        <div class="bench-col"><span id="bP100Label">P100 (ms)</span><strong id="bP100">—</strong></div>
-      </div>
-      <div class="bench-status">
-        <span id="bBadge" class="badge-pass">Ready to measure</span>
-      </div>
-      <p id="bMeta" class="bench-meta" aria-live="polite"></p>
-    </div>
-  </div>
 
   <div id="error" class="err hidden" role="alert"></div>
 
@@ -822,8 +888,10 @@ input[type=text]:focus { border-color: var(--yellow); background: rgba(4, 34, 15
     <div id="chunks"></div>
   </div>
 
+  </div>
   </main>
 
+  <div class="wrap">
   <div class="fuji" aria-hidden="true"></div>
 
   <footer class="foot">
@@ -832,6 +900,37 @@ input[type=text]:focus { border-color: var(--yellow); background: rgba(4, 34, 15
     <span>#RAGInGoa</span>
   </footer>
 </div>
+
+<details class="bench-dock" id="benchDock">
+  <summary class="bench-fab" title="Performance evidence">
+    <span class="fab-glyph" aria-hidden="true"></span>
+    <span class="sr">Performance evidence — latency benchmark</span>
+  </summary>
+
+  <div class="bench-panel panel" id="benchCard">
+    <div class="step"><span class="n">速</span> Performance evidence <span class="hint">live</span></div>
+    <div class="bench-header">
+      <h3>Latency benchmark
+        <small>Warm-cache demo · held-out report documented separately</small>
+      </h3>
+    </div>
+    <p class="bench-invite">Measures the running service end to end — 30 fixed Hindi and English
+      queries against the deployed index, reported as P50, P70 and P100.</p>
+    <button id="runBenchBtn" class="btn btn-yellow bench-btn" type="button">Run warm benchmark</button>
+    <div id="benchBody" class="bench-body hidden">
+      <div class="bench-stats">
+        <div class="bench-col"><span>AVG (ms)</span><strong id="bAvg">—</strong></div>
+        <div class="bench-col"><span>P50 (ms)</span><strong id="bP50">—</strong></div>
+        <div class="bench-col"><span id="bP70Label">P70 (ms)</span><strong id="bP70">—</strong></div>
+        <div class="bench-col"><span id="bP100Label">P100 (ms)</span><strong id="bP100">—</strong></div>
+      </div>
+      <div class="bench-status">
+        <span id="bBadge" class="badge-pass">Ready to measure</span>
+      </div>
+      <p id="bMeta" class="bench-meta" aria-live="polite"></p>
+    </div>
+  </div>
+</details>
 
 <script>
 const $ = (id) => document.getElementById(id);
