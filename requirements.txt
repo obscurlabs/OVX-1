@@ -1,0 +1,31 @@
+# Runtime dependencies, mirrored from pyproject.toml [project].dependencies.
+#
+# pyproject.toml remains the source of truth for the package build and the
+# container image. This file exists because tooling that expects a plain
+# requirements.txt cannot read it -- notably the Task #2 evaluation suite
+# (github.com/BeaconBandhu/rag-local-eval-loop), whose runbook instructs
+# evaluators to install the submission's own requirements.txt into the venv it
+# runs from. Without this file that step has nothing to point at.
+#
+# Keep in sync with pyproject.toml when dependencies change.
+
+fastapi>=0.115
+uvicorn[standard]>=0.32
+pydantic>=2.9
+pydantic-settings>=2.6
+python-dotenv>=1.0
+orjson>=3.10
+httpx>=0.27
+numpy>=1.26,<3
+pyarrow>=17
+onnxruntime>=1.19
+tokenizers>=0.20
+huggingface-hub>=0.26
+rank-bm25>=0.2.2
+usearch>=2.16
+groq>=0.11
+python-multipart>=0.0.12
+
+# Required by the evaluation suite itself (it builds its own throwaway FAISS
+# index over MSMARCO-XI). Not imported by voicerag at runtime.
+faiss-cpu>=1.9.0

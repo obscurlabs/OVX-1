@@ -179,13 +179,31 @@ class AnswerRouter:
         # Escalate. If the LLM is unavailable - no keys, all keys cooling down,
         # upstream failure - fall back to the best extractive candidate rather
         # than failing the request, and let the grounding guard judge it.
+        escalation_attempted = False
         if allow_escalation and self.llm is not None and getattr(self.llm, "enabled", False):
+            escalation_attempted = True
             try:
                 return self._escalate(query, chunks)
             except Exception:  # noqa: BLE001 - degradation is the intended behaviour
                 pass
 
-        if candidate is not None:
+        # Degrading from a failed LLM call is not the same as never having
+        # qualified, and the difference decides whether this is a fallback or a
+        # fabrication.
+        #
+        # After a failed escalation the candidate is the best available answer
+        # for a request that would otherwise return nothing, so returning it is
+        # the intended degradation.
+        #
+        # Without escalation it has already scored below min_confidence, and
+        # returning it anyway asserts something retrieval never supported. The
+        # grounding guard cannot catch that: an extractive answer is a verbatim
+        # span copied out of a retrieved chunk, so a traceability check passes
+        # it by construction. fast_only=True is the default request shape, so
+        # this branch is the common path, not an edge case - measured at a 0.920
+        # false-confidence rate against MSMARCO-XI's unanswerable queries before
+        # this gate existed.
+        if candidate is not None and escalation_attempted:
             return (
                 Answer(
                     text=candidate.text,
@@ -202,7 +220,7 @@ class AnswerRouter:
                 text="I couldn't find an answer to that in my documents.",
                 decision=Decision.ABSTAIN,
                 route=Route.EXTRACTIVE,
-                grounding_score=0.0,
+                grounding_score=candidate.confidence if candidate is not None else 0.0,
             ),
             Route.EXTRACTIVE,
         )
